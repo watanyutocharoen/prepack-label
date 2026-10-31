@@ -203,7 +203,8 @@ td.ver .btn{margin-left:4px}
   #gsBadge{background:rgba(255,255,255,.2);padding:1px 8px;border-radius:99px}
   #gsBadge:empty{display:none}
 }
-@media print{.pthint,#btnHintTog{display:none!important}}
+@media screen{.pghint{font-size:13px;font-weight:600;color:#0a6f65;background:#e8f6f3;border:1px solid #c5e5df;padding:4px 10px;border-radius:99px}.pghint.warn{color:#8a5a00;background:#fff3d6;border-color:#f1d98a}}
+@media print{.pthint,#btnHintTog,.pghint{display:none!important}}
 /* ===== มือถือ / จอเล็ก ===== */
 @media(max-width:720px){
   body{font-size:15px}
@@ -308,7 +309,7 @@ td.ver .btn{margin-left:4px}
         <div class="fld"><label>จำนวนสติ๊กเกอร์ (ดวง)</label><input id="fCopies" type="number" min="1" value="56"></div>
         <div class="fld"><label>เริ่มพิมพ์ที่ช่องที่ <span class="small">(ข้ามช่องที่ใช้แล้ว)</span></label><input id="fStart" type="number" min="1" value="1"></div>
       </div>
-      <div style="margin:-6px 0 14px"><button class="btn ghost sm" type="button" id="btnFull">เติมให้เต็มแผ่น</button></div>
+      <div style="margin:-6px 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost sm" type="button" id="btnFull">เติมให้เต็มแผ่น</button><span class="pghint" id="pgHint"></span></div>
       <div class="actions">
         <button class="btn pri" type="submit" id="btnGen">✨ สร้างสติ๊กเกอร์</button>
         <button class="btn ghost" type="button" id="btnClear">ล้าง</button>
@@ -610,7 +611,29 @@ unitCombo('#fTotalUnit','#ddTotalUnit');unitCombo('#fPackUnit','#ddPackUnit');
 function calcPacks(){
   const q=parseFloat($('#fQty').value),t=parseFloat($('#fTotal').value);
   if(q>0&&t>=0)$('#fPacks').value=String(Math.round(t/q*100)/100);else $('#fPacks').value='';
+  syncCopies();
 }
+/* จำนวนดวง = จำนวนแพ็คที่ได้ (อัตโนมัติ จนกว่าจะแก้เอง) และคำนวณจำนวนแผ่นที่ต้องใช้ */
+let copiesAuto=true;
+function pagesFor(copies,start){
+  const first=usableSlots(start), full=usableSlots(1);
+  if(copies<=first)return {pages:1,last:copies};
+  const rem=copies-first, more=Math.ceil(rem/full);
+  return {pages:1+more,last:rem-(more-1)*full};
+}
+function updatePgHint(){
+  const c=Math.max(1,parseInt($('#fCopies').value)||1), st=Math.max(1,parseInt($('#fStart').value)||1);
+  const r=pagesFor(c,st), el=$('#pgHint');
+  el.textContent='📄 ใช้ '+r.pages+' แผ่น'+(r.pages>1?' (แผ่นสุดท้าย '+r.last+' ดวง)':'')+(copiesAuto&&parseFloat($('#fPacks').value)>0?' · ตามจำนวนแพ็ค':'');
+  el.classList.toggle('warn',r.pages>10);
+}
+function syncCopies(){
+  if(copiesAuto){const p=parseFloat($('#fPacks').value);if(p>0)$('#fCopies').value=String(Math.max(1,Math.min(5000,Math.ceil(p-1e-9))))}
+  updatePgHint();
+}
+$('#fPacks').addEventListener('input',syncCopies);
+$('#fCopies').addEventListener('input',()=>{copiesAuto=false;updatePgHint()});
+$('#fStart').addEventListener('input',updatePgHint);
 $('#fQty').addEventListener('input',calcPacks);$('#fTotal').addEventListener('input',calcPacks);
 [['fAsst','ddAsst'],['fMaker','ddMaker']].forEach(([fi,dd])=>{
 combo($('#'+fi),$('#'+dd),q=>{
@@ -653,6 +676,7 @@ function setForm(r){
 }
 function clearForm(keepDate){
   setForm({copies:usableSlots(1),start:1,pack:keepDate?todayISO():todayISO()});
+  copiesAuto=true;updatePgHint();
   setEdit(null);
 }
 function setEdit(id,rec){
@@ -663,7 +687,7 @@ function setEdit(id,rec){
 }
 $('#btnCancelEdit').onclick=()=>{clearForm()};
 $('#btnClear').onclick=()=>{clearForm();$('#fName').focus()};
-$('#btnFull').onclick=()=>{$('#fCopies').value=usableSlots(parseInt($('#fStart').value)||1)};
+$('#btnFull').onclick=()=>{copiesAuto=false;$('#fCopies').value=usableSlots(parseInt($('#fStart').value)||1);updatePgHint()};
 $('#frm').addEventListener('submit',e=>{
   e.preventDefault();
   const f=getForm();
@@ -862,7 +886,7 @@ $('#hBody').addEventListener('click',e=>{
     if(!confirm('ยืนยันการตรวจสอบโดย '+found+'?\nเมื่อยืนยันแล้ว จะแก้ไขหรือลบรายการนี้ไม่ได้อีก'))return;
     rec.verBy=found;rec.verAt=Date.now();saveHist();renderHistory();toast('บันทึกการตรวจสอบแล้ว');return
   }
-  if(b.dataset.act==='edit'){setForm(rec);setEdit(rec.id,rec);$('#formCard').scrollIntoView({behavior:'smooth'});}
+  if(b.dataset.act==='edit'){setForm(rec);copiesAuto=false;updatePgHint();setEdit(rec.id,rec);$('#formCard').scrollIntoView({behavior:'smooth'});}
   else if(b.dataset.act==='print'){renderSheets(rec);toast('สร้างตัวอย่างแล้ว — กด Ctrl+Shift+P เพื่อพิมพ์');$('#pvCard').scrollIntoView({behavior:'smooth'})}
   else if(b.dataset.act==='del'){if(confirm('ลบรายการนี้ออกจากบันทึก?')){history=history.filter(h=>h!==rec);saveHist();renderHistory()}}
 });
