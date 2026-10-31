@@ -1012,7 +1012,7 @@ const FS=(function(){
 const GS_CODE="/* Prepack Label — ตัวรับ-ส่งข้อมูลกับ Google Sheet\n   วางใน Extensions > Apps Script แล้ว Deploy > New deployment > Web app\n   (Execute as: Me / Who has access: Anyone) */\nconst SECRET = '';   // ถ้าอยากตั้งรหัสลับ ใส่ตรงนี้ แล้วใส่รหัสเดียวกันในช่อง \"รหัสลับ\" ของแอป\n\nconst H_DRUG = ['รหัสยา', 'ชื่อยา'];\nconst H_LIST = ['ประเภท', 'ค่า'];\nconst H_HIST = ['id', 'upd', 'วันแบ่งบรรจุ', 'รหัสยา', 'ชื่อยา', 'Lot', 'หมดอายุ', 'จำนวนต่อแพ็ค', 'ผู้แบ่งบรรจุ', 'ผู้ทำสติ๊กเกอร์', 'ผู้ติดสติ๊กเกอร์', 'เภสัชกรตรวจสอบ', 'หน่วยที่แพ็ค', 'json'];\nconst KINDS = ['units', 'assts', 'pharms'];\n\nfunction sheet_(name, hdr) {\n  const ss = SpreadsheetApp.getActive();\n  let s = ss.getSheetByName(name);\n  if (!s) { s = ss.insertSheet(name); s.appendRow(hdr); s.setFrozenRows(1); }\n  return s;\n}\nfunction rows_(s, n) {\n  const last = s.getLastRow();\n  return last < 2 ? [] : s.getRange(2, 1, last - 1, n).getValues();\n}\nfunction put_(s, hdr, data) {\n  const last = s.getLastRow();\n  if (last > 1) s.getRange(2, 1, last - 1, s.getMaxColumns()).clearContent();\n  if (data.length) s.getRange(2, 1, data.length, hdr.length).setValues(data);\n}\nfunction out_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\nfunction readAll_() {\n  const drugs = rows_(sheet_('ยา', H_DRUG), 2).map(r => ({ code: String(r[0]), name: String(r[1]) }));\n  const lists = { units: [], assts: [], pharms: [] };\n  rows_(sheet_('รายชื่อ', H_LIST), 2).forEach(r => { if (lists[r[0]]) lists[r[0]].push(String(r[1])); });\n  const history = rows_(sheet_('ประวัติ', H_HIST), H_HIST.length).map(r => {\n    try { const o = JSON.parse(r[13]); o.upd = Number(r[1]) || 0; return o; } catch (e) { return null; }\n  }).filter(Boolean);\n  return { ok: true, drugs: drugs, units: lists.units, assts: lists.assts, pharms: lists.pharms, history: history, hasData: drugs.length > 0 || history.length > 0 };\n}\nfunction histRow_(h) {\n  return [h.id, h.upd || 0, h.pack || '', h.code || '', h.name || '', h.lot || '', h.exp || '',\n    (h.qty || '') + ' ' + (h.unit || ''), h.maker || '', h.asst || '', h.sticker || '', h.verBy || '', h.site || '', JSON.stringify(h)];\n}\n\nfunction doGet(e) {\n  if (SECRET && (!e || !e.parameter || e.parameter.k !== SECRET)) return out_({ ok: false, err: 'key' });\n  return out_({ ok: true, msg: 'Prepack Label sheet พร้อมใช้งาน' });\n}\n\nfunction doPost(e) {\n  const lock = LockService.getScriptLock();\n  lock.waitLock(25000);\n  try {\n    const b = JSON.parse(e.postData.contents || '{}');\n    if (SECRET && b.k !== SECRET) return out_({ ok: false, err: 'key' });\n\n    if (b.drugs) put_(sheet_('ยา', H_DRUG), H_DRUG, b.drugs.map(d => [String(d.code || ''), String(d.name || '')]));\n\n    const L = b.lists || {};\n    if (KINDS.some(k => L[k])) {\n      const cur = readAll_();\n      const data = [];\n      KINDS.forEach(k => (L[k] || cur[k]).forEach(v => data.push([k, v])));\n      put_(sheet_('รายชื่อ', H_LIST), H_LIST, data);\n    }\n\n    if ((b.up && b.up.length) || (b.del && b.del.length)) {\n      const s = sheet_('ประวัติ', H_HIST);\n      const map = {};\n      rows_(s, H_HIST.length).forEach(r => { map[r[0]] = r; });\n      (b.up || []).forEach(h => {\n        const old = map[h.id];\n        if (!old || (Number(old[1]) || 0) <= (h.upd || 0)) map[h.id] = histRow_(h);\n      });\n      (b.del || []).forEach(id => { delete map[id]; });\n      const all = Object.keys(map).map(k => map[k]);\n      all.sort((a, c) => (JSON.parse(a[13]).createdAt || 0) - (JSON.parse(c[13]).createdAt || 0));\n      put_(s, H_HIST, all);\n    }\n    return out_(readAll_());\n  } catch (err) {\n    return out_({ ok: false, err: String(err) });\n  } finally {\n    lock.releaseLock();\n  }\n}\n";
 const Sync=(function(){
   const CK='plp_sheet', SK='plp_snap';
-  let cfg=store.get(CK,null), busy=false, again=false, timer=null, last='', lastErr='';
+  let internal=false, cfg=store.get(CK,null), busy=false, again=false, timer=null, last='', lastErr='';
   const hash=s=>{s=String(s);let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return s.length+':'+(h>>>0)};
   const J=JSON.stringify;
   const snapGet=()=>store.get(SK,null);
@@ -1045,6 +1045,7 @@ const Sync=(function(){
       history.forEach(h=>{const j=J(Object.assign({},h,{upd:0}));if(first||sn.h[h.id]!==hash(j)){h.upd=Date.now();up.push(h)}});
       if(!first)Object.keys(sn.h).forEach(id=>{if(!history.some(h=>h.id===id))del.push(id)});
       if(first){
+        internal=true;
         const uni=(a,b)=>{const s=new Set(a);b.forEach(x=>{if(!s.has(x))a.push(x),s.add(x)});return a};
         const rl={units:remote.units,assts:remote.assts,pharms:remote.pharms};
         if(remote.drugs.length){const have=new Set(remote.drugs.map(d=>d.code.toLowerCase()));const m=remote.drugs.slice();drugs.forEach(d=>{if(!have.has((d.code||'').toLowerCase()))m.push(d)});drugs=m}
@@ -1054,7 +1055,7 @@ const Sync=(function(){
         history=[...rh.values()].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
         up.length=0;history.forEach(h=>{if(!h.upd)h.upd=Date.now();up.push(h)});
         store.set('plp_drugs',drugs);store.set('plp_units',units);store.set('plp_assts',assts);store.set('plp_pharms',pharms);store.set('plp_history',history);
-        body.drugs=drugs;body.lists=localLists();
+        body.drugs=drugs;body.lists=localLists();internal=false;
       }else{
         if(dirty.drugs)body.drugs=drugs;
         ['units','assts','pharms'].forEach(k=>{if(dirty[k])body.lists[k]=ll[k]});
@@ -1063,6 +1064,7 @@ const Sync=(function(){
       if(!body.drugs&&!Object.keys(body.lists).length&&!up.length&&!del.length&&!first){/* แค่ดึง */}
       /* 2) ส่ง + รับของล่าสุด */
       const d=await call(body);
+      internal=true;
       /* 3) รวมของใหม่จากเซิร์ฟเวอร์เข้าเครื่อง */
       let changed=false;
       const setIf=(k,cur,rem,apply)=>{
@@ -1087,6 +1089,7 @@ const Sync=(function(){
       d.history.forEach(r=>{if(!mine.has(r.id)){nh.push(r);changed=true}});
       nh.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
       history=nh;store.set('plp_history',history);
+      internal=false;
       /* 4) บันทึก snapshot */
       const ns={h:{},l:{drugs:hash(J(drugs))}};
       history.forEach(h=>{ns.h[h.id]=hash(J(Object.assign({},h,{upd:0})))});
@@ -1099,7 +1102,7 @@ const Sync=(function(){
       lastErr=e.message||String(e);
       stat('ซิงค์ไม่สำเร็จ: '+(/Failed to fetch/i.test(lastErr)?'ไม่มีอินเทอร์เน็ต (ข้อมูลเก็บในเครื่องไว้ก่อน)':lastErr),true);
     }finally{
-      busy=false;
+      internal=false;busy=false;
       if(again){again=false;soon()}
     }
   }
@@ -1128,7 +1131,7 @@ const Sync=(function(){
   }
   return {start,soon,run};
 })();
-syncSoon=Sync.soon;
+syncSoon=()=>{if(!internal)Sync.soon()};
 
 clearForm();
 renderManage();renderHistory();Sync.start();
