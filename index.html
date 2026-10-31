@@ -149,6 +149,55 @@ td.ver .btn{margin-left:4px}
   .sheetBox:last-child{page-break-after:auto;break-after:auto}
   .sheet{position:relative!important;transform:none!important}
 }
+
+/* ===== มือถือ / จอเล็ก ===== */
+@media(max-width:720px){
+  body{font-size:15px}
+  header{padding:10px 12px;gap:8px;flex-wrap:wrap}
+  header .logo{width:34px;height:34px}
+  header h1{font-size:17px}
+  header .sp{display:none}
+  header>div:nth-child(2){flex:1;min-width:0}
+  .hbtn{padding:7px 10px;font-size:13px;flex:1 1 auto;text-align:center}
+  main{margin:10px auto;padding:0 8px;gap:12px}
+  .card{padding:14px 12px;border-radius:12px}
+  input,select,textarea{font-size:16px;padding:11px 12px}
+  .row.r2,.row.r3,.row.rq{grid-template-columns:1fr}
+  .row.r2b{grid-template-columns:1fr 1fr}
+  .btn{padding:12px 16px}
+  .btn.sm{padding:10px 14px;font-size:14px}
+  .actions{flex-direction:column}
+  #pvArea{padding:8px;overflow-x:auto;align-items:flex-start}
+  .hhead{gap:8px}
+  .hhead h2{flex:1 1 100%}
+  .hhead input{max-width:none;flex:1 1 100%}
+  .hhead .btn{flex:1 1 auto}
+  .modal{padding:0;align-items:flex-end}
+  .mbox{width:100%;max-height:96vh;border-radius:16px 16px 0 0}
+  .set-grid{grid-template-columns:repeat(2,1fr)}
+  /* ตารางประวัติ -> การ์ด */
+  .tblwrap{max-height:none;border:0;overflow:visible}
+  .tblwrap table,.tblwrap tbody{display:block}
+  .tblwrap thead{display:none}
+  #hBody tr{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;position:relative;padding:12px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+  #hBody td{display:block;border:0;padding:0;min-width:0;word-break:break-word;font-size:14px}
+  #hBody td[data-label]::before{content:attr(data-label);display:block;font-size:11px;color:var(--mute);font-weight:600}
+  #hBody td:nth-child(1){position:absolute;right:10px;top:10px}
+  #hBody td:nth-child(1)::before{display:none!important}
+  #hBody td:nth-child(1) input{width:22px;height:22px}
+  #hBody td:nth-child(3){grid-column:1/-1;order:-1;font-size:16px;padding-right:34px}
+  #hBody td:nth-child(3)::before{display:none!important}
+  #hBody td:nth-child(8),#hBody td:nth-child(12),#hBody td:nth-child(13),#hBody td:nth-child(14){grid-column:1/-1}
+  #hBody td.ver{display:flex;flex-direction:column;gap:8px;background:#f0faf8;border:1px solid #cfe9e4;border-radius:10px;padding:10px}
+  #hBody td.ver .vin{width:100%}
+  #hBody td.ver .btn{width:100%;padding:13px}
+  #hBody td.act{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #hBody td.act .btn{flex:1 1 auto}
+  #hBody .stkrow{flex-wrap:wrap;white-space:normal}
+  #hBody .stkrow .vin{width:auto;flex:1 1 140px}
+  #hBody .empty-h{display:block}
+  #hBody tr:has(.empty-h){display:block}
+}
 </style>
 </head>
 <body>
@@ -724,6 +773,7 @@ function renderHistory(){
     const acts=ver?'<span class="small">🔒 ล็อกแล้ว</span><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button>'
       :'<button class="btn ghost sm" data-act="edit" data-id="'+h.id+'">✏️ แก้ไข</button><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button><button class="btn red sm" data-act="del" data-id="'+h.id+'">🗑</button>';
     return '<tr><td>'+'<input type="checkbox" style="width:auto" data-sel="'+h.id+'"'+(sel.has(h.id)?' checked':'')+'>'+'</td><td>'+fmtDT(h.createdAt)+(h.editedAt?'<span class="tag">แก้ไข '+fmtDT(h.editedAt)+'</span>':'')+'</td><td><b>'+esc(h.name)+'</b>'+(h.site?' <span class="tag">'+esc(h.site)+'</span>':'')+(h.code?'<div class="small">'+esc(h.code)+'</div>':'')+'</td><td>'+esc(h.lot)+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||'')+' → '+esc(h.packs||'')+' '+esc(h.packUnit||''):'-')+'</td><td>'+h.copies+'</td><td>'+esc(h.asst||'-')+'</td><td>'+esc(h.maker||'-')+'</td><td>'+stk+'</td><td class="ver">'+vcell+'</td><td class="act">'+acts+'</td></tr>'}).join('');
+  {const hs=[...$('#hBody').closest('table').tHead.rows[0].cells].map(c=>c.textContent.trim());$$('#hBody tr').forEach(tr=>[...tr.cells].forEach((c,i)=>{if(hs[i])c.dataset.label=hs[i]}))}
 }
 $('#hBody').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
