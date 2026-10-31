@@ -158,7 +158,7 @@ td.ver .btn{margin-left:4px}
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
   </div>
   <div>
-    <h1>Prepack Label</h1>
+    <h1>Prepack Label <span id="gsBadge" style="font-size:13px;font-weight:400"></span></h1>
     
   </div>
   <div class="sp"></div>
@@ -241,6 +241,11 @@ td.ver .btn{margin-left:4px}
 <div class="modal" id="mManage"><div class="mbox">
   <div class="mhead"><h3>จัดการรายการยา / หน่วย</h3><button class="btn ghost sm" data-close>ปิด ✕</button></div>
   <div class="mbody">
+    <div id="gsBar" style="margin-bottom:8px;padding:8px;border:1px dashed #5a9;border-radius:8px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:13px">☁️ ซิงค์ Google Sheet (ไม่ต้องสำรองเอง ใช้ร่วมกันได้หลายเครื่อง)</b><span class="small" id="gsStat"></span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><input id="gsUrl" type="text" placeholder="วางลิงก์ Web app (https://script.google.com/macros/s/…/exec)" style="flex:1 1 320px;min-width:0"><input id="gsKey" type="text" placeholder="รหัสลับ (ถ้าตั้ง)" style="flex:0 1 140px;min-width:0"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri sm" id="gsConnect" type="button">เชื่อมต่อ</button><button class="btn ghost sm" id="gsNow" type="button">ซิงค์ตอนนี้</button><button class="btn ghost sm" id="gsOff" type="button">ยกเลิกการเชื่อมต่อ</button><button class="btn ghost sm" id="gsCopy" type="button">📋 คัดลอกโค้ด Apps Script</button></div>
+      <textarea id="gsCode" readonly style="display:none;height:120px;font-size:11px"></textarea>
+      <div class="small">วิธีตั้งครั้งเดียว: สร้าง Google Sheet เปล่า → Extensions › Apps Script → ลบโค้ดเดิม วางโค้ดที่คัดลอก → Deploy › New deployment › Web app (Execute as: Me, Who has access: Anyone) → คัดลอกลิงก์มาวางด้านบน แล้วกด เชื่อมต่อ</div></div>
     <div id="bkBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><button class="btn ghost sm" id="btnBackup2">⬇️ สำรองข้อมูล (.json)</button><label class="btn ghost sm" style="margin:0">⬆️ กู้คืนจากไฟล์สำรอง<input type="file" id="restoreFile2" accept=".json" hidden></label><span class="small" id="bkInfo"></span></div>
     <div id="fsBar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;padding:8px;border:1px dashed #9ab;border-radius:8px"><b style="font-size:13px">📁 ไฟล์ข้อมูลถาวร</b><button class="btn pri sm" id="fsNew">สร้างไฟล์ข้อมูล</button><button class="btn ghost sm" id="fsOpen">เลือกไฟล์ข้อมูลเดิม</button><button class="btn ghost sm" id="fsResume" style="display:none">เปิดใช้ไฟล์ที่เชื่อมไว้</button><span class="small" id="fsInfo"></span></div>
     <div class="tabs"><div class="tab on" data-tab="drug">💊 รายการยา <span id="cDrug"></span></div><div class="tab" data-tab="unit">📏 หน่วย <span id="cUnit"></span></div><div class="tab" data-tab="assts">👤 ผู้ช่วยเภสัชกร <span id="cAssts"></span></div><div class="tab" data-tab="pharms">⚕️ เภสัชกร <span id="cPharms"></span></div></div>
@@ -387,9 +392,11 @@ td.ver .btn{margin-left:4px}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const MM=96/25.4;
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let syncSoon=()=>{};
+const SYNCK=new Set(['plp_drugs','plp_units','plp_assts','plp_pharms','plp_history']);
 const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
-  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('บันทึกลงเบราว์เซอร์ไม่ได้')}}
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){toast('บันทึกลงเบราว์เซอร์ไม่ได้')}if(SYNCK.has(k))syncSoon()}
 };
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200)}
 
@@ -1001,8 +1008,130 @@ const FS=(function(){
 })();
 
 /* ---------- Init ---------- */
+/* ---------- Google Sheet sync ---------- */
+const GS_CODE="/* Prepack Label — ตัวรับ-ส่งข้อมูลกับ Google Sheet\n   วางใน Extensions > Apps Script แล้ว Deploy > New deployment > Web app\n   (Execute as: Me / Who has access: Anyone) */\nconst SECRET = '';   // ถ้าอยากตั้งรหัสลับ ใส่ตรงนี้ แล้วใส่รหัสเดียวกันในช่อง \"รหัสลับ\" ของแอป\n\nconst H_DRUG = ['รหัสยา', 'ชื่อยา'];\nconst H_LIST = ['ประเภท', 'ค่า'];\nconst H_HIST = ['id', 'upd', 'วันแบ่งบรรจุ', 'รหัสยา', 'ชื่อยา', 'Lot', 'หมดอายุ', 'จำนวนต่อแพ็ค', 'ผู้แบ่งบรรจุ', 'ผู้ทำสติ๊กเกอร์', 'ผู้ติดสติ๊กเกอร์', 'เภสัชกรตรวจสอบ', 'หน่วยที่แพ็ค', 'json'];\nconst KINDS = ['units', 'assts', 'pharms'];\n\nfunction sheet_(name, hdr) {\n  const ss = SpreadsheetApp.getActive();\n  let s = ss.getSheetByName(name);\n  if (!s) { s = ss.insertSheet(name); s.appendRow(hdr); s.setFrozenRows(1); }\n  return s;\n}\nfunction rows_(s, n) {\n  const last = s.getLastRow();\n  return last < 2 ? [] : s.getRange(2, 1, last - 1, n).getValues();\n}\nfunction put_(s, hdr, data) {\n  const last = s.getLastRow();\n  if (last > 1) s.getRange(2, 1, last - 1, s.getMaxColumns()).clearContent();\n  if (data.length) s.getRange(2, 1, data.length, hdr.length).setValues(data);\n}\nfunction out_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\nfunction readAll_() {\n  const drugs = rows_(sheet_('ยา', H_DRUG), 2).map(r => ({ code: String(r[0]), name: String(r[1]) }));\n  const lists = { units: [], assts: [], pharms: [] };\n  rows_(sheet_('รายชื่อ', H_LIST), 2).forEach(r => { if (lists[r[0]]) lists[r[0]].push(String(r[1])); });\n  const history = rows_(sheet_('ประวัติ', H_HIST), H_HIST.length).map(r => {\n    try { const o = JSON.parse(r[13]); o.upd = Number(r[1]) || 0; return o; } catch (e) { return null; }\n  }).filter(Boolean);\n  return { ok: true, drugs: drugs, units: lists.units, assts: lists.assts, pharms: lists.pharms, history: history, hasData: drugs.length > 0 || history.length > 0 };\n}\nfunction histRow_(h) {\n  return [h.id, h.upd || 0, h.pack || '', h.code || '', h.name || '', h.lot || '', h.exp || '',\n    (h.qty || '') + ' ' + (h.unit || ''), h.maker || '', h.asst || '', h.sticker || '', h.verBy || '', h.site || '', JSON.stringify(h)];\n}\n\nfunction doGet(e) {\n  if (SECRET && (!e || !e.parameter || e.parameter.k !== SECRET)) return out_({ ok: false, err: 'key' });\n  return out_({ ok: true, msg: 'Prepack Label sheet พร้อมใช้งาน' });\n}\n\nfunction doPost(e) {\n  const lock = LockService.getScriptLock();\n  lock.waitLock(25000);\n  try {\n    const b = JSON.parse(e.postData.contents || '{}');\n    if (SECRET && b.k !== SECRET) return out_({ ok: false, err: 'key' });\n\n    if (b.drugs) put_(sheet_('ยา', H_DRUG), H_DRUG, b.drugs.map(d => [String(d.code || ''), String(d.name || '')]));\n\n    const L = b.lists || {};\n    if (KINDS.some(k => L[k])) {\n      const cur = readAll_();\n      const data = [];\n      KINDS.forEach(k => (L[k] || cur[k]).forEach(v => data.push([k, v])));\n      put_(sheet_('รายชื่อ', H_LIST), H_LIST, data);\n    }\n\n    if ((b.up && b.up.length) || (b.del && b.del.length)) {\n      const s = sheet_('ประวัติ', H_HIST);\n      const map = {};\n      rows_(s, H_HIST.length).forEach(r => { map[r[0]] = r; });\n      (b.up || []).forEach(h => {\n        const old = map[h.id];\n        if (!old || (Number(old[1]) || 0) <= (h.upd || 0)) map[h.id] = histRow_(h);\n      });\n      (b.del || []).forEach(id => { delete map[id]; });\n      const all = Object.keys(map).map(k => map[k]);\n      all.sort((a, c) => (JSON.parse(a[13]).createdAt || 0) - (JSON.parse(c[13]).createdAt || 0));\n      put_(s, H_HIST, all);\n    }\n    return out_(readAll_());\n  } catch (err) {\n    return out_({ ok: false, err: String(err) });\n  } finally {\n    lock.releaseLock();\n  }\n}\n";
+const Sync=(function(){
+  const CK='plp_sheet', SK='plp_snap';
+  let cfg=store.get(CK,null), busy=false, again=false, timer=null, last='', lastErr='';
+  const hash=s=>{s=String(s);let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return s.length+':'+(h>>>0)};
+  const J=JSON.stringify;
+  const snapGet=()=>store.get(SK,null);
+  const stat=(t,bad)=>{const e=$('#gsStat');if(e){e.textContent=t;e.style.color=bad?'#b91c1c':'#166534'}const b=$('#gsBadge');if(b){b.textContent=cfg?(bad?'☁️⚠️':'☁️✓'):'';b.title=t}};
+  function localLists(){return {units:units,assts:assts,pharms:pharms}}
+  async function call(body){
+    const r=await fetch(cfg.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:J(Object.assign({k:cfg.key||''},body)),redirect:'follow'});
+    const t=await r.text();let d;try{d=JSON.parse(t)}catch(e){throw new Error('ลิงก์ไม่ถูกต้อง หรือยังไม่ได้ตั้งสิทธิ์ Anyone')}
+    if(!d.ok)throw new Error(d.err==='key'?'รหัสลับไม่ตรง':(d.err||'ผิดพลาด'));
+    return d;
+  }
+  async function run(){
+    if(!cfg||!/^https:\/\/script\.google\.com\//.test(cfg.url||''))return;
+    if(busy){again=true;return}
+    busy=true;stat('กำลังซิงค์…');
+    try{
+      const snap=snapGet();
+      const first=!snap;
+      const sn=snap||{h:{},l:{}};
+      /* 1) คำนวณสิ่งที่เปลี่ยนในเครื่อง */
+      const body={lists:{}};
+      const ll=localLists();
+      const curHash={drugs:hash(J(drugs))};Object.keys(ll).forEach(k=>curHash[k]=hash(J(ll[k])));
+      const dirty={};
+      ['drugs','units','assts','pharms'].forEach(k=>{if(first||curHash[k]!==sn.l[k])dirty[k]=1});
+      /* ครั้งแรก: ดึงของเดิมมาก่อนแล้วรวม ไม่ทับ */
+      let remote;
+      if(first){remote=await call({})}
+      const up=[],del=[];
+      history.forEach(h=>{const j=J(Object.assign({},h,{upd:0}));if(first||sn.h[h.id]!==hash(j)){h.upd=Date.now();up.push(h)}});
+      if(!first)Object.keys(sn.h).forEach(id=>{if(!history.some(h=>h.id===id))del.push(id)});
+      if(first){
+        const uni=(a,b)=>{const s=new Set(a);b.forEach(x=>{if(!s.has(x))a.push(x),s.add(x)});return a};
+        const rl={units:remote.units,assts:remote.assts,pharms:remote.pharms};
+        if(remote.drugs.length){const have=new Set(remote.drugs.map(d=>d.code.toLowerCase()));const m=remote.drugs.slice();drugs.forEach(d=>{if(!have.has((d.code||'').toLowerCase()))m.push(d)});drugs=m}
+        units=uni(rl.units.slice(),units);assts=uni(rl.assts.slice(),assts);pharms=uni(rl.pharms.slice(),pharms);
+        const rh=new Map(remote.history.map(h=>[h.id,h]));
+        history.forEach(h=>{const r=rh.get(h.id);if(!r||(r.upd||0)<=(h.upd||0))rh.set(h.id,h)});
+        history=[...rh.values()].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+        up.length=0;history.forEach(h=>{if(!h.upd)h.upd=Date.now();up.push(h)});
+        store.set('plp_drugs',drugs);store.set('plp_units',units);store.set('plp_assts',assts);store.set('plp_pharms',pharms);store.set('plp_history',history);
+        body.drugs=drugs;body.lists=localLists();
+      }else{
+        if(dirty.drugs)body.drugs=drugs;
+        ['units','assts','pharms'].forEach(k=>{if(dirty[k])body.lists[k]=ll[k]});
+      }
+      body.up=up;body.del=del;
+      if(!body.drugs&&!Object.keys(body.lists).length&&!up.length&&!del.length&&!first){/* แค่ดึง */}
+      /* 2) ส่ง + รับของล่าสุด */
+      const d=await call(body);
+      /* 3) รวมของใหม่จากเซิร์ฟเวอร์เข้าเครื่อง */
+      let changed=false;
+      const setIf=(k,cur,rem,apply)=>{
+        if(dirty[k])return;                       /* เครื่องนี้เพิ่งเปลี่ยนและส่งไปแล้ว */
+        if(J(cur)!==J(rem)&&rem.length){apply(rem);changed=true}
+      };
+      setIf('drugs',drugs,d.drugs,v=>{drugs=v;store.set('plp_drugs',v)});
+      setIf('units',units,d.units,v=>{units=v;store.set('plp_units',v)});
+      setIf('assts',assts,d.assts,v=>{assts=v;store.set('plp_assts',v)});
+      setIf('pharms',pharms,d.pharms,v=>{pharms=v;store.set('plp_pharms',v)});
+      /* ประวัติ: รับของที่ใหม่กว่า/ที่ไม่มีในเครื่อง และลบที่ถูกลบจากเครื่องอื่น */
+      const rmap=new Map(d.history.map(h=>[h.id,h]));
+      const pend=new Set(up.map(h=>h.id));
+      const nh=[];
+      history.forEach(h=>{
+        const r=rmap.get(h.id);
+        if(r){ if(!pend.has(h.id)&&(r.upd||0)>(h.upd||0)){nh.push(r);changed=true} else nh.push(h) }
+        else if(pend.has(h.id)||!sn.h[h.id]) nh.push(h);   /* ใหม่ในเครื่อง ยังไม่ขึ้น */
+        else changed=true;                                  /* ถูกลบจากเครื่องอื่น */
+      });
+      const mine=new Set(nh.map(h=>h.id));
+      d.history.forEach(r=>{if(!mine.has(r.id)){nh.push(r);changed=true}});
+      nh.sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+      history=nh;store.set('plp_history',history);
+      /* 4) บันทึก snapshot */
+      const ns={h:{},l:{drugs:hash(J(drugs))}};
+      history.forEach(h=>{ns.h[h.id]=hash(J(Object.assign({},h,{upd:0})))});
+      Object.keys(ll).forEach(k=>ns.l[k]=hash(J(localLists()[k])));
+      try{localStorage.setItem(SK,J(ns))}catch(e){}
+      last=new Date().toLocaleTimeString('th-TH');
+      stat('ซิงค์แล้ว '+last);
+      if(changed||first){renderManage();renderHistory()}
+    }catch(e){
+      lastErr=e.message||String(e);
+      stat('ซิงค์ไม่สำเร็จ: '+(/Failed to fetch/i.test(lastErr)?'ไม่มีอินเทอร์เน็ต (ข้อมูลเก็บในเครื่องไว้ก่อน)':lastErr),true);
+    }finally{
+      busy=false;
+      if(again){again=false;soon()}
+    }
+  }
+  function soon(){if(!cfg)return;clearTimeout(timer);timer=setTimeout(run,1500)}
+  function ui(){
+    const u=$('#gsUrl'),k=$('#gsKey');if(!u)return;
+    u.value=cfg?cfg.url:'';k.value=cfg?(cfg.key||''):'';
+    $('#gsConnect').onclick=async()=>{
+      const url=u.value.trim();
+      if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec/.test(url)){toast('ลิงก์ต้องขึ้นต้น https://script.google.com/macros/s/… และลงท้าย /exec');return}
+      cfg={url:url,key:k.value.trim()};store.set(CK,cfg);
+      try{localStorage.removeItem(SK)}catch(e){}
+      await run();
+    };
+    $('#gsNow').onclick=()=>{if(!cfg){toast('ยังไม่ได้เชื่อมต่อ');return}run()};
+    $('#gsOff').onclick=()=>{if(!confirm('ยกเลิกการเชื่อมต่อ Google Sheet?\n(ข้อมูลในเครื่องและใน Sheet ยังอยู่ครบ)'))return;cfg=null;try{localStorage.removeItem(CK);localStorage.removeItem(SK)}catch(e){}u.value='';k.value='';stat('ยังไม่ได้เชื่อมต่อ',true);const g=$('#gsBadge');if(g)g.textContent=''};
+    $('#gsCopy').onclick=async()=>{
+      try{await navigator.clipboard.writeText(GS_CODE);toast('คัดลอกโค้ดแล้ว')}
+      catch(e){const t=$('#gsCode');t.style.display='block';t.value=GS_CODE;t.select();toast('กด Ctrl+C เพื่อคัดลอก')}
+    };
+    stat(cfg?'เชื่อมต่อแล้ว':'ยังไม่ได้เชื่อมต่อ',!cfg);
+  }
+  function start(){
+    ui();
+    if(cfg){run();setInterval(()=>{if(!document.hidden)run()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)run()});window.addEventListener('online',run)}
+  }
+  return {start,soon,run};
+})();
+syncSoon=Sync.soon;
+
 clearForm();
-renderManage();renderHistory();
+renderManage();renderHistory();Sync.start();
 document.querySelectorAll('.expq button').forEach(b=>b.addEventListener('click',()=>{
   const f=n=>String(n).padStart(2,'0');
   let base=$('#fPack').value;
