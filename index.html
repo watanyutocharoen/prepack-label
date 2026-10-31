@@ -524,6 +524,9 @@ let drugs=store.get('plp_drugs',null); if(!drugs||!store.get('plp_seed_v1',false
 let units=store.get('plp_units',null); if(!units){units=DEF_UNITS.slice();store.set('plp_units',units)}
 let history=store.get('plp_history',[]);
 let assts=store.get('plp_assts',[]), pharms=store.get('plp_pharms',[]);
+/* ชื่อซ้ำ: เทียบแบบไม่สนคำนำหน้า (ภญ./ภก./นาย/นาง/นางสาว/น.ส.) ช่องว่าง/แท็บ ตัวพิมพ์เล็ก-ใหญ่ */
+function nameKey(s){return String(s||'').toLowerCase().replace(/[\s\u00a0\u200b]+/g,'').replace(/^(นางสาว|น\.ส\.|นส\.|นาง|นาย|ภญ\.|ภก\.|ภญ|ภก|ดร\.|พญ\.|นพ\.)+/,'').replace(/\./g,'')}
+function findName(list,n){const k=nameKey(n);return k?list.find(x=>nameKey(x)===k):undefined}
 const PL={assts:{get:()=>assts,set:v=>{assts=v;store.set('plp_assts',v)},n:'ผู้ช่วยเภสัชกร'},pharms:{get:()=>pharms,set:v=>{pharms=v;store.set('plp_pharms',v)},n:'เภสัชกร'}};
 let S=(function(){const o=store.get('plp_settings',{});return o&&o.ver===26?Object.assign({},DEF_SET,o):Object.assign({},DEF_SET)
 })();
@@ -656,10 +659,10 @@ combo($('#'+fi),$('#'+dd),q=>{
   const ql=q.toLowerCase();
   let r=assts.filter(u=>!ql||u.toLowerCase().includes(ql)).sort((a,b)=>(b.toLowerCase().startsWith(ql)?1:0)-(a.toLowerCase().startsWith(ql)?1:0));
   let out=r.slice(0,40).map(u=>({u,html:qq=>hl(u,qq)}));
-  if(q&&!assts.some(u=>u.toLowerCase()===ql))out.push({add:true,u:q,html:()=>'＋ เพิ่มชื่อ “'+esc(q)+'” ลงรายการผู้ช่วยเภสัชกร'});
+  if(q&&!findName(assts,q))out.push({add:true,u:q,html:()=>'＋ เพิ่มชื่อ “'+esc(q)+'” ลงรายการผู้ช่วยเภสัชกร'});
   return out;
 },it=>{
-  if(it.add){PL.assts.set(assts.concat([it.u]));renderManage();toast('เพิ่ม “'+it.u+'” แล้ว')}
+  if(it.add){const nn=it.u.replace(/[\s\u00a0]+/g,' ');const d=findName(assts,nn);if(d)it={u:d};else{PL.assts.set(assts.concat([nn]));renderManage();toast('เพิ่ม “'+nn+'” แล้ว');it={u:nn}}}
   $('#'+fi).value=it.u;
 });
 });
@@ -889,15 +892,15 @@ $('#hBody').addEventListener('click',e=>{
   if(rec.verBy&&(b.dataset.act==='edit'||b.dataset.act==='del')){toast('รายการนี้ตรวจสอบแล้ว แก้ไข/ลบไม่ได้');return}
   if(b.dataset.act==='stickedit'){stkEdit.add(rec.id);renderHistory();return}
   if(b.dataset.act==='stick'){
-    const inp=$('#hBody').querySelector('[data-sin="'+rec.id+'"]');const nm=inp?inp.value.trim():'';
+    const inp=$('#hBody').querySelector('[data-sin="'+rec.id+'"]');let nm=inp?inp.value.trim():'';
     if(!nm){toast('ใส่ชื่อผู้ติดสติ๊กเกอร์ก่อน');if(inp)inp.focus();return}
-    const found=assts.find(x=>x.toLowerCase()===nm.toLowerCase());
-    if(!found){if(!confirm('ไม่มีชื่อ “'+nm+'” ในรายการ — เพิ่มลงรายการผู้ช่วยเภสัชกรด้วยหรือไม่?'))return;PL.assts.set(assts.concat([nm]));renderManage()}
+    let found=findName(assts,nm);
+    if(!found){if(!confirm('ไม่มีชื่อ “'+nm+'” ในรายการ — เพิ่มลงรายการผู้ช่วยเภสัชกรด้วยหรือไม่?'))return;nm=nm.replace(/[\s\u00a0]+/g,' ');PL.assts.set(assts.concat([nm]));renderManage()}
     rec.sticker=found||nm;rec.stickAt=Date.now();stkEdit.delete(rec.id);saveHist();renderHistory();toast('บันทึกผู้ติดสติ๊กเกอร์แล้ว');return
   }
   if(b.dataset.act==='verify'){
     const inp=$('#hBody').querySelector('[data-vin="'+rec.id+'"]');const nm=inp?inp.value.trim():'';
-    const found=pharms.find(x=>x.toLowerCase()===nm.toLowerCase());
+    const found=findName(pharms,nm);
     if(!found){toast(nm?'ไม่พบชื่อนี้ในรายการเภสัชกร (เพิ่มได้ที่ “จัดการรายการ”)':'เลือกชื่อเภสัชกรก่อน');if(inp)inp.focus();return}
     if(!confirm('ยืนยันการตรวจสอบโดย '+found+'?\nเมื่อยืนยันแล้ว จะแก้ไขหรือลบรายการนี้ไม่ได้อีก'))return;
     rec.verBy=found;rec.verAt=Date.now();saveHist();renderHistory();toast('บันทึกการตรวจสอบแล้ว');return
@@ -915,7 +918,7 @@ $('#hBody').addEventListener('click',e=>{
   function build(){
     const q=inp.value.trim(),ql=q.toLowerCase(),src=kind(inp)==='pharms'?pharms:assts;
     items=src.filter(u=>!ql||u.toLowerCase().includes(ql)).sort((a,b)=>(b.toLowerCase().startsWith(ql)?1:0)-(a.toLowerCase().startsWith(ql)?1:0)).slice(0,40).map(u=>({u,html:'<span>'+hl(u,q)+'</span>'}));
-    if(kind(inp)==='assts'&&q&&!src.some(u=>u.toLowerCase()===ql))items.push({u:q,add:true,html:'＋ ใช้ชื่อ “'+esc(q)+'” (เพิ่มลงรายการ)'});
+    if(kind(inp)==='assts'&&q&&!findName(src,q))items.push({u:q,add:true,html:'＋ ใช้ชื่อ “'+esc(q)+'” (เพิ่มลงรายการ)'});
     idx=items.length?0:-1;
     dd.innerHTML=items.length?items.map((it,i)=>'<div class="it'+(i===idx?' on':'')+(it.add?' add':'')+'" data-i="'+i+'">'+it.html+'</div>').join(''):'<div class="empty">ไม่พบรายการ</div>';
     place();dd.classList.add('show');
@@ -1057,13 +1060,14 @@ $('#btnImpUnit').onclick=()=>{
 
 // ผู้ช่วยเภสัชกร / เภสัชกร
 ['assts','pharms'].forEach(k=>{
-  const add=n=>{n=n.trim();if(!n)return false;const l=PL[k].get();if(l.some(x=>x.toLowerCase()===n.toLowerCase()))return false;PL[k].set(l.concat([n]));return true};
-  $('#btnAddPl_'+k).onclick=()=>{if(add($('#nPl_'+k).value)){$('#nPl_'+k).value='';renderManage();renderHistory()}else toast('ใส่ชื่อ หรือมีชื่อนี้อยู่แล้ว')};
+  let dupMsg='';
+  const add=n=>{dupMsg='';n=n.trim();if(!n)return false;n=n.replace(/[\s\u00a0]+/g,' ');const l=PL[k].get();const d=findName(l,n);if(d){dupMsg=d;return false}PL[k].set(l.concat([n]));return true};
+  $('#btnAddPl_'+k).onclick=()=>{if(add($('#nPl_'+k).value)){$('#nPl_'+k).value='';renderManage();renderHistory()}else toast(dupMsg?'มีชื่อนี้อยู่แล้วในรายการ: “'+dupMsg+'”':'ใส่ชื่อก่อน')};
   $('#nPl_'+k).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#btnAddPl_'+k).click()}});
-  $('#btnImpPl_'+k).onclick=()=>{let n=0;$('#impPl_'+k).value.split(/\r?\n/).forEach(x=>{if(add(x))n++});$('#impPl_'+k).value='';renderManage();renderHistory();toast('เพิ่ม '+n+' ชื่อ')};
+  $('#btnImpPl_'+k).onclick=()=>{let n=0;let sk=0;$('#impPl_'+k).value.split(/\r?\n/).forEach(x=>{if(!x.trim())return;if(add(x))n++;else sk++});$('#impPl_'+k).value='';renderManage();renderHistory();toast('เพิ่ม '+n+' ชื่อ'+(sk?' (ข้ามชื่อซ้ำ '+sk+')':''))};
   $('#plRows_'+k).addEventListener('change',e=>{
     const i=e.target.dataset.pi;if(i==null)return;const l=PL[k].get().slice();const v=e.target.value.trim();
-    if(v)l[i]=v;else l.splice(i,1);PL[k].set(l);renderManage();renderHistory();
+    if(v){const d=l.find((x,j)=>j!=i&&nameKey(x)===nameKey(v));if(d){toast('มีชื่อนี้อยู่แล้วในรายการ: “'+d+'”');renderManage();return}l[i]=v.replace(/[\s\u00a0]+/g,' ')}else l.splice(i,1);PL[k].set(l);renderManage();renderHistory();
   });
   $('#plRows_'+k).addEventListener('click',e=>{
     const b=e.target.closest('[data-pldel]');if(!b)return;const i=+b.dataset.pldel.split(':')[1];
