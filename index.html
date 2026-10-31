@@ -298,7 +298,7 @@ td.ver .btn{margin-left:4px}
         <div class="fld"><label>หน่วยแบ่งบรรจุทั้งหมด <span style="color:var(--danger)">*</span></label><input id="fTotalUnit" placeholder="พิมพ์ค้นหาหน่วย..."><div class="dd" id="ddTotalUnit"></div></div>
       </div>
       <div class="row rq" style="align-items:end">
-        <div class="fld"><label>จำนวนแพ็คที่ได้ <span class="small">(คำนวณให้ แก้ได้)</span> <span style="color:var(--danger)">*</span></label><input id="fPacks" type="number" inputmode="decimal" min="0" step="any" placeholder="อัตโนมัติ"></div>
+        <div class="fld"><label>จำนวนแพ็คที่ได้ <span class="small">(คำนวณให้ แก้ได้)</span> <span style="color:var(--danger)">*</span></label><input id="fPacks" type="number" inputmode="decimal" min="0" step="any" placeholder="อัตโนมัติ"><div class="small" id="remHint" style="margin-top:4px;font-weight:600;color:#8a5a00"></div></div>
         <div class="fld"><label>หน่วยแพ็ค <span style="color:var(--danger)">*</span></label><input id="fPackUnit" placeholder="เช่น ซอง, ขวด"><div class="dd" id="ddPackUnit"></div></div>
       </div>
       <div class="row"><div class="fld"><label>หน่วยที่แพ็คยา <span style="color:var(--danger)">*</span></label><input type="hidden" id="fSite"><div class="sitebtns" id="siteBtns"><button type="button" class="btn ghost" data-site="M1">M1</button><button type="button" class="btn ghost" data-site="M2">M2</button><button type="button" class="btn ghost" data-site="M4">M4</button><button type="button" class="btn ghost" data-site="ปกส.">ปกส.</button></div></div></div>
@@ -610,8 +610,24 @@ function unitCombo(inp,dd){combo($(inp),$(dd),q=>{
 unitCombo('#fTotalUnit','#ddTotalUnit');unitCombo('#fPackUnit','#ddPackUnit');
 function calcPacks(){
   const q=parseFloat($('#fQty').value),t=parseFloat($('#fTotal').value);
-  if(q>0&&t>=0)$('#fPacks').value=String(Math.round(t/q*100)/100);else $('#fPacks').value='';
+  if(q>0&&t>=0)$('#fPacks').value=String(Math.floor(t/q+1e-9));else $('#fPacks').value='';
   syncCopies();
+}
+function remText(q,t,n,unit){
+  q=parseFloat(q);t=parseFloat(t);n=Math.floor(parseFloat(n)+1e-9);
+  if(!(q>0)||!(t>=0)||!(n>=0))return '';
+  const r=Math.round((t-n*q)*100)/100;
+  return r>0?' (เหลือเศษ '+r+(unit?' '+unit:'')+')':'';
+}
+function packsText(h){
+  if(h.packs===''||h.packs==null)return '';
+  const n=Math.floor(parseFloat(h.packs)+1e-9);
+  if(!(n>=0))return esc(h.packs)+' '+esc(h.packUnit||'');
+  return esc(n)+' '+esc(h.packUnit||'')+esc(remText(h.qty,h.total,n,h.totalUnit||h.unit||''));
+}
+function updRem(){
+  const p=Math.floor(parseFloat($('#fPacks').value)+1e-9);
+  $('#remHint').textContent=remText($('#fQty').value,$('#fTotal').value,p,($('#fTotalUnit').value||$('#fUnit').value||'').trim()).trim();
 }
 /* จำนวนดวง = จำนวนแพ็คที่ได้ (อัตโนมัติ จนกว่าจะแก้เอง) และคำนวณจำนวนแผ่นที่ต้องใช้ */
 let copiesAuto=true;
@@ -628,10 +644,10 @@ function updatePgHint(){
   el.classList.toggle('warn',r.pages>10);
 }
 function syncCopies(){
-  if(copiesAuto){const p=parseFloat($('#fPacks').value);if(p>0)$('#fCopies').value=String(Math.max(1,Math.min(5000,Math.ceil(p-1e-9))))}
-  updatePgHint();
+  if(copiesAuto){const p=parseFloat($('#fPacks').value);if(p>=1)$('#fCopies').value=String(Math.max(1,Math.min(5000,Math.floor(p+1e-9))))}
+  updatePgHint();updRem();
 }
-$('#fPacks').addEventListener('input',syncCopies);
+$('#fPacks').addEventListener('input',syncCopies);['fQty','fTotal','fTotalUnit','fUnit'].forEach(i=>$('#'+i).addEventListener('input',updRem));
 $('#fCopies').addEventListener('input',()=>{copiesAuto=false;updatePgHint()});
 $('#fStart').addEventListener('input',updatePgHint);
 $('#fQty').addEventListener('input',calcPacks);$('#fTotal').addEventListener('input',calcPacks);
@@ -864,7 +880,7 @@ function renderHistory(){
       :'<div class="stkrow"><input class="vin" list="dlAsst" data-sin="'+h.id+'" value="'+esc(h.sticker||'')+'" placeholder="ชื่อผู้ติด"><button class="btn pri sm" data-act="stick" data-id="'+h.id+'">บันทึก</button></div>');
     const acts=ver?'<span class="small">🔒 ล็อกแล้ว</span><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button>'
       :'<button class="btn ghost sm" data-act="edit" data-id="'+h.id+'">✏️ แก้ไข</button><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button><button class="btn red sm" data-act="del" data-id="'+h.id+'">🗑</button>';
-    return '<tr><td>'+'<input type="checkbox" style="width:auto" data-sel="'+h.id+'"'+(sel.has(h.id)?' checked':'')+'>'+'</td><td>'+fmtDT(h.createdAt)+(h.editedAt?'<span class="tag">แก้ไข '+fmtDT(h.editedAt)+'</span>':'')+'</td><td><b>'+esc(h.name)+'</b>'+(h.site?' <span class="tag">'+esc(h.site)+'</span>':'')+(h.code?'<div class="small">'+esc(h.code)+'</div>':'')+'</td><td>'+esc(h.lot)+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||'')+' → '+esc(h.packs||'')+' '+esc(h.packUnit||''):'-')+'</td><td>'+h.copies+'</td><td>'+esc(h.asst||'-')+'</td><td>'+esc(h.maker||'-')+'</td><td>'+stk+'</td><td class="ver">'+vcell+'</td><td class="act">'+acts+'</td></tr>'}).join('');
+    return '<tr><td>'+'<input type="checkbox" style="width:auto" data-sel="'+h.id+'"'+(sel.has(h.id)?' checked':'')+'>'+'</td><td>'+fmtDT(h.createdAt)+(h.editedAt?'<span class="tag">แก้ไข '+fmtDT(h.editedAt)+'</span>':'')+'</td><td><b>'+esc(h.name)+'</b>'+(h.site?' <span class="tag">'+esc(h.site)+'</span>':'')+(h.code?'<div class="small">'+esc(h.code)+'</div>':'')+'</td><td>'+esc(h.lot)+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||'')+' → '+packsText(h):'-')+'</td><td>'+h.copies+'</td><td>'+esc(h.asst||'-')+'</td><td>'+esc(h.maker||'-')+'</td><td>'+stk+'</td><td class="ver">'+vcell+'</td><td class="act">'+acts+'</td></tr>'}).join('');
   {const hs=[...$('#hBody').closest('table').tHead.rows[0].cells].map(c=>c.textContent.trim());$$('#hBody tr').forEach(tr=>[...tr.cells].forEach((c,i)=>{if(hs[i])c.dataset.label=hs[i]}))}
 }
 $('#hBody').addEventListener('click',e=>{
@@ -887,7 +903,8 @@ $('#hBody').addEventListener('click',e=>{
     rec.verBy=found;rec.verAt=Date.now();saveHist();renderHistory();toast('บันทึกการตรวจสอบแล้ว');return
   }
   if(b.dataset.act==='edit'){setForm(rec);copiesAuto=false;updatePgHint();setEdit(rec.id,rec);$('#formCard').scrollIntoView({behavior:'smooth'});}
-  else if(b.dataset.act==='print'){renderSheets(rec);toast('สร้างตัวอย่างแล้ว — กด Ctrl+Shift+P เพื่อพิมพ์');$('#pvCard').scrollIntoView({behavior:'smooth'})}
+  else if(b.dataset.act==='print'){const pk=Math.floor(parseFloat(rec.packs)+1e-9);const rr=(pk>=1&&pk!==rec.copies)?Object.assign({},rec,{copies:Math.min(5000,pk),start:1}):rec;
+    renderSheets(rr);toast((rr!==rec?'ปริ๊นซ้ำตามจำนวนแพ็ค '+rr.copies+' ดวง — ':'สร้างตัวอย่างแล้ว — ')+'กด Ctrl+Shift+P เพื่อพิมพ์');$('#pvCard').scrollIntoView({behavior:'smooth'})}
   else if(b.dataset.act==='del'){if(confirm('ลบรายการนี้ออกจากบันทึก?')){history=history.filter(h=>h!==rec);saveHist();renderHistory()}}
 });
 $('#hSearch').addEventListener('input',renderHistory);
@@ -1044,7 +1061,7 @@ $('#btnRptPrint').onclick=()=>{
   const sheets=l.reduce((a,h)=>a+(+h.copies||0),0),nv=l.filter(h=>h.verBy).length;
   $('#reportArea').innerHTML='<div class="rpt-h"><div><h1>รายงานการแบ่งบรรจุยา</h1><div>ช่วงวันที่ '+esc(fmtDate($('#rFrom').value))+' – '+esc(fmtDate($('#rTo').value))+'</div><div><b>หน่วยที่แพ็คยา: '+esc(($('#rSite').value==='all'?['M1','M2','M4','ปกส.'].filter(x=>l.some(h=>h.site===x)).join(', ')||'-':$('#rSite').value))+'</b></div></div><div style="text-align:right">พิมพ์เมื่อ '+fmtDT(Date.now())+'</div></div>'
    +'<table><thead><tr><th>#</th><th>วัน-เวลา</th><th>รหัส</th><th>ชื่อยา</th><th>Lot</th><th>แบ่งบรรจุ</th><th>หมดอายุ</th><th>จำนวนต่อแพ็ค</th><th>ใช้แบ่งบรรจุ</th><th>ได้แพ็ค</th><th>ผู้แบ่งบรรจุ</th><th>ผู้ทำสติ๊กเกอร์</th><th>ผู้ติดสติ๊กเกอร์</th><th>เภสัชกรตรวจสอบ</th></tr></thead><tbody>'
-   +l.map((h,i)=>'<tr><td>'+(i+1)+'</td><td>'+fmtDT(h.createdAt)+'</td><td>'+esc(h.code||'')+'</td><td>'+esc(h.name)+'</td><td>'+esc(h.lot||'')+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||''):'')+'</td><td>'+(h.packs?esc(h.packs)+' '+esc(h.packUnit||''):'')+'</td><td>'+esc(h.asst||'')+'</td><td>'+esc(h.maker||'')+'</td><td>'+esc(h.sticker||'')+'</td><td>'+(h.verBy?esc(h.verBy)+'<br>'+fmtDT(h.verAt):'<i>ยังไม่ตรวจสอบ</i>')+'</td></tr>').join('')
+   +l.map((h,i)=>'<tr><td>'+(i+1)+'</td><td>'+fmtDT(h.createdAt)+'</td><td>'+esc(h.code||'')+'</td><td>'+esc(h.name)+'</td><td>'+esc(h.lot||'')+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||''):'')+'</td><td>'+(h.packs?packsText(h):'')+'</td><td>'+esc(h.asst||'')+'</td><td>'+esc(h.maker||'')+'</td><td>'+esc(h.sticker||'')+'</td><td>'+(h.verBy?esc(h.verBy)+'<br>'+fmtDT(h.verAt):'<i>ยังไม่ตรวจสอบ</i>')+'</td></tr>').join('')
    +'</tbody></table><div class="sum">รวม '+l.length+' รายการ · ตรวจสอบแล้ว '+nv+' รายการ</div>';
   $('#mReport').classList.remove('show');
   $('#pageStyle').textContent='@page{size:A4 landscape;margin:10mm}';
