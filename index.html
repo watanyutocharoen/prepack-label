@@ -22,7 +22,8 @@ header .sp{flex:1}
 .hbtn{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3);padding:8px 14px;border-radius:10px;cursor:pointer;font:inherit;font-size:14px}
 .hbtn:hover{background:rgba(255,255,255,.28)}
 main{max-width:1400px;margin:22px auto;padding:0 20px;display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:20px;align-items:start}
-@media(max-width:980px){main{grid-template-columns:1fr}}
+@media(max-width:980px){main{grid-template-columns:minmax(0,1fr)}}
+main>*{min-width:0}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px}
 .card h2{margin:0 0 14px;font-size:16px;display:flex;align-items:center;gap:8px}
 .card h2 .dot{width:8px;height:20px;border-radius:4px;background:var(--pri)}
@@ -150,6 +151,59 @@ td.ver .btn{margin-left:4px}
   .sheet{position:relative!important;transform:none!important}
 }
 
+
+/* ===== ปรับหน้าตา (เฉพาะหน้าจอ ไม่กระทบการพิมพ์) ===== */
+@media screen{
+  body{background:radial-gradient(1200px 500px at 85% -10%,#dff1ee 0,transparent 60%),radial-gradient(900px 400px at -10% 0,#e3ecfb 0,transparent 55%),var(--bg);background-attachment:fixed}
+  header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(1.2)}
+  header h1{letter-spacing:.3px}
+  .hbtn{transition:.15s;font-weight:600}
+  .hbtn:active{transform:translateY(1px)}
+  .card{border:1px solid rgba(221,229,238,.8);transition:box-shadow .2s}
+  .card h2{font-size:17px;font-weight:700;letter-spacing:.1px}
+  label{letter-spacing:.1px}
+  input,select,textarea{box-shadow:inset 0 1px 0 rgba(22,38,58,.03)}
+  input:hover,textarea:hover{border-color:#c6d3e2}
+  .btn{letter-spacing:.1px}
+  .btn:active{transform:translateY(1px)}
+  .btn.pri{background:linear-gradient(135deg,#12a090,#0e8a7d)}
+  .btn.pri:hover{background:linear-gradient(135deg,#0e8a7d,#0a6f65)}
+  .btn.blue{background:linear-gradient(135deg,#4a7bf7,#3b6cf6);box-shadow:0 4px 12px rgba(59,108,246,.28)}
+  .btn.blue:hover{filter:brightness(.95)}
+  .btn.ghost{border:1px solid #dde5ee}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .actions .pri{letter-spacing:.2px}
+  .pvbar{padding:10px 12px;background:#f5f8fc;border:1px solid var(--line);border-radius:12px}
+  .pvbar .info{font-weight:600;color:#44566d}
+  #btnPrint{padding:11px 22px;font-size:15px}
+  #pvArea{background:linear-gradient(180deg,#d7dfe9,#c8d2de);box-shadow:inset 0 2px 8px rgba(22,38,58,.08)}
+  .placeholder{border:2px dashed #aebbcc;border-radius:14px;margin:12px;background:rgba(255,255,255,.35);width:calc(100% - 24px)}
+  .pthint{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,#eefaf8,#eef4ff);border:1px solid #cfe6e1}
+  .pthint .pt-ic{font-size:24px;line-height:1}
+  .pthint .pt-tx{flex:1;min-width:0;font-size:13.5px;color:#25405a}
+  .pthint .pt-tx>b:first-child{display:block;font-size:14.5px;color:#0a6f65;margin-bottom:2px}
+  .pthint ol{margin:4px 0 0;padding-left:20px}
+  .pthint li{margin:2px 0}
+  .pthint .or{color:var(--mute)}
+  kbd{font:600 12px/1 ui-monospace,Consolas,monospace;background:#fff;border:1px solid #c6d3e2;border-bottom-width:2px;border-radius:6px;padding:3px 6px;color:#25405a}
+  .tblwrap{box-shadow:0 1px 3px rgba(22,38,58,.05)}
+  th{background:#eef3f9;border-bottom:1px solid var(--line);text-transform:none}
+  tbody tr:nth-child(even) td{background:#fbfcfe}
+  tr:hover td{background:#f1f7fb!important}
+  td .tag{font-weight:600}
+  .vok{display:inline-block;background:#e4f6ee;border:1px solid #bfe6d3;padding:2px 9px;border-radius:99px;font-size:12.5px}
+  .modal{backdrop-filter:blur(2px)}
+  .mbox{border:1px solid rgba(255,255,255,.4)}
+  .mhead{background:linear-gradient(180deg,#fff,#f8fafd);border-radius:16px 16px 0 0}
+  .tab{transition:.15s}
+  .tab:hover{background:#e0e7f0}
+  .tab.on:hover{background:var(--pri-d)}
+  #toast{box-shadow:0 8px 24px rgba(22,38,58,.3);font-weight:600}
+  .dd{border-radius:12px}
+  #gsBadge{background:rgba(255,255,255,.2);padding:1px 8px;border-radius:99px}
+  #gsBadge:empty{display:none}
+}
+@media print{.pthint,#btnHintTog{display:none!important}}
 /* ===== มือถือ / จอเล็ก ===== */
 @media(max-width:720px){
   body{font-size:15px}
@@ -266,7 +320,19 @@ td.ver .btn{margin-left:4px}
     <h2><span class="dot" style="background:var(--acc)"></span>ตัวอย่างก่อนพิมพ์</h2>
     <div class="pvbar">
       <div class="info" id="pvInfo">ยังไม่ได้สร้างสติ๊กเกอร์</div>
+      <button class="btn ghost sm" id="btnHintTog" type="button" title="วิธีพิมพ์ให้ตรงช่อง">💡 วิธีพิมพ์</button>
       <button class="btn blue" id="btnPrint" disabled>🖨️ พิมพ์</button>
+    </div>
+    <div class="pthint" id="pthint">
+      <div class="pt-ic">🖨️</div>
+      <div class="pt-tx"><b>พิมพ์ให้ตรงช่องสติ๊กเกอร์</b>
+        <ol>
+          <li>กดปุ่ม <b>พิมพ์</b> แล้วคลิก <b>Print using system dialog…</b> ที่ท้ายแผงซ้าย <span class="or">หรือกด</span> <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd></li>
+          <li>เลือกเครื่อง Epson และกระดาษ <b>Junk Label 167×220</b></li>
+          <li>ไม่ย่อ/ไม่ขยาย (Scale 100%) แล้วกดพิมพ์</li>
+        </ol>
+      </div>
+      <button class="btn ghost sm" id="pthintX" type="button" title="ซ่อน">✕</button>
     </div>
     <div id="pvArea"><div class="placeholder">กรอกข้อมูลทางซ้าย แล้วกด “สร้างสติ๊กเกอร์”<br>ตัวอย่างแผ่นจะแสดงตรงนี้</div></div>
   </section>
@@ -739,6 +805,10 @@ function applyScale(){
 }
 window.addEventListener('resize',applyScale);
 $('#btnPrint').onclick=()=>{if(current){fitNames();window.print()}};
+(function(){const h=$('#pthint');let off=false;try{off=localStorage.getItem('plp_hint_off')==='1'}catch(e){}
+  const set=v=>{h.style.display=v?'flex':'none';try{localStorage.setItem('plp_hint_off',v?'0':'1')}catch(e){}};
+  h.style.display=off?'none':'flex';
+  $('#pthintX').onclick=()=>set(false);$('#btnHintTog').onclick=()=>set(h.style.display==='none');})();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(current)fitNames()});
 
 /* ---------- History ---------- */
