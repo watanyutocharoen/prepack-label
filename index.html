@@ -175,7 +175,7 @@ td.ver .btn{margin-left:4px}
   .actions .pri{letter-spacing:.2px}
   .pvbar{padding:10px 12px;background:#f5f8fc;border:1px solid var(--line);border-radius:12px}
   .pvbar .info{font-weight:600;color:#44566d}
-  #btnPrint{padding:11px 22px;font-size:15px}
+  #btnPrint{padding:10px 16px;font-size:14px;background:#eef2f7;color:#25405a;opacity:1!important;cursor:default;box-shadow:none;border:1px dashed #9db0c6;pointer-events:none}
   #pvArea{background:linear-gradient(180deg,#d7dfe9,#c8d2de);box-shadow:inset 0 2px 8px rgba(22,38,58,.08)}
   .placeholder{border:2px dashed #aebbcc;border-radius:14px;margin:12px;background:rgba(255,255,255,.35);width:calc(100% - 24px)}
   .pthint{display:flex;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,#eefaf8,#eef4ff);border:1px solid #cfe6e1}
@@ -321,13 +321,13 @@ td.ver .btn{margin-left:4px}
     <div class="pvbar">
       <div class="info" id="pvInfo">ยังไม่ได้สร้างสติ๊กเกอร์</div>
       <button class="btn ghost sm" id="btnHintTog" type="button" title="วิธีพิมพ์ให้ตรงช่อง">💡 วิธีพิมพ์</button>
-      <button class="btn blue" id="btnPrint" disabled>🖨️ พิมพ์</button>
+      <button class="btn" id="btnPrint" type="button" disabled tabindex="-1" aria-disabled="true" title="พิมพ์ด้วยคีย์ลัด Ctrl+Shift+P">🖨️ พิมพ์: กด <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></button>
     </div>
     <div class="pthint" id="pthint">
       <div class="pt-ic">🖨️</div>
       <div class="pt-tx"><b>พิมพ์ให้ตรงช่องสติ๊กเกอร์</b>
         <ol>
-          <li>กดปุ่ม <b>พิมพ์</b> แล้วคลิก <b>Print using system dialog…</b> ที่ท้ายแผงซ้าย <span class="or">หรือกด</span> <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd></li>
+          <li>กด <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> บนคีย์บอร์ด <span class="or">(ไม่มีปุ่มพิมพ์ในหน้านี้ เพราะปุ่มจะเปิดหน้าต่างพิมพ์ของ Chrome ซึ่งวางตำแหน่งผิด)</span></li>
           <li>เลือกเครื่อง Epson และกระดาษ <b>Junk Label 167×220</b></li>
           <li>ไม่ย่อ/ไม่ขยาย (Scale 100%) แล้วกดพิมพ์</li>
         </ol>
@@ -735,7 +735,6 @@ function renderTestSheet(){
   current={name:'ทดสอบขอบ'};
   $('#pvArea').innerHTML='<div class="sheetBox"><div class="sheet" style="width:'+S.pageW+'mm;height:'+(S.pageH-0.6)+'mm">'+inner+'</div></div>';
   $('#pvInfo').textContent='หน้าทดสอบขอบกระดาษ — พิมพ์แล้วดูว่าเส้นที่ใกล้ขอบที่สุดที่ยังเห็นคือกี่ มม.';
-  $('#btnPrint').disabled=false;
   $('#pageStyle').textContent=pageCss();
   applyScale();
 }
@@ -762,7 +761,6 @@ function renderSheets(rec){
   }
   $('#pvArea').innerHTML=html;
   $('#pvInfo').textContent=rec.name+' · '+rec.copies+' ดวง · '+pages+' แผ่น'+(skipped?' · ข้ามช่องที่เครื่องพิมพ์พิมพ์ไม่ถึง '+skipped+' ช่อง':'');
-  $('#btnPrint').disabled=false;
   $('#pageStyle').textContent=pageCss();
   fitNames();applyScale();
 }
@@ -804,7 +802,7 @@ function applyScale(){
   });
 }
 window.addEventListener('resize',applyScale);
-$('#btnPrint').onclick=()=>{if(current){fitNames();window.print()}};
+window.addEventListener('beforeprint',()=>{if(current)try{fitNames()}catch(e){}});
 (function(){const h=$('#pthint');let off=false;try{off=localStorage.getItem('plp_hint_off')==='1'}catch(e){}
   const set=v=>{h.style.display=v?'flex':'none';try{localStorage.setItem('plp_hint_off',v?'0':'1')}catch(e){}};
   h.style.display=off?'none':'flex';
@@ -865,7 +863,7 @@ $('#hBody').addEventListener('click',e=>{
     rec.verBy=found;rec.verAt=Date.now();saveHist();renderHistory();toast('บันทึกการตรวจสอบแล้ว');return
   }
   if(b.dataset.act==='edit'){setForm(rec);setEdit(rec.id,rec);$('#formCard').scrollIntoView({behavior:'smooth'});}
-  else if(b.dataset.act==='print'){renderSheets(rec);setTimeout(()=>window.print(),250)}
+  else if(b.dataset.act==='print'){renderSheets(rec);toast('สร้างตัวอย่างแล้ว — กด Ctrl+Shift+P เพื่อพิมพ์');$('#pvCard').scrollIntoView({behavior:'smooth'})}
   else if(b.dataset.act==='del'){if(confirm('ลบรายการนี้ออกจากบันทึก?')){history=history.filter(h=>h!==rec);saveHist();renderHistory()}}
 });
 $('#hSearch').addEventListener('input',renderHistory);
