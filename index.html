@@ -874,7 +874,7 @@ function renderHistory(){
   $('#hBody').innerHTML=list.slice(0,300).map(h=>{
     const ver=!!h.verBy;
     const vcell=ver?'<span class="vok">✅ ตรวจสอบแล้ว</span><div class="small">'+esc(h.verBy)+' · '+fmtDT(h.verAt)+'</div>'
-      :'<input class="vin" list="dlPharm" data-vin="'+h.id+'" placeholder="ชื่อเภสัชกร"><button class="btn pri sm" data-act="verify" data-id="'+h.id+'">ตรวจสอบแล้ว</button>';
+      :'<select class="vin" data-vin="'+h.id+'"><option value="">— เลือกเภสัชกร —</option>'+pharms.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'</select><button class="btn pri sm" data-act="verify" data-id="'+h.id+'">ตรวจสอบแล้ว</button>';
     const stk=ver?esc(h.sticker||'-')+(h.stickAt?'<div class="small">'+fmtDT(h.stickAt)+'</div>':'')
       :((h.sticker&&h.stickAt&&!stkEdit.has(h.id))?'<div class="stkrow"><b>'+esc(h.sticker)+'</b><span class="small">'+fmtDT(h.stickAt)+'</span><button class="btn ghost sm" title="แก้ไขชื่อ" data-act="stickedit" data-id="'+h.id+'">✏️</button></div>'
       :'<div class="stkrow"><input class="vin" list="dlAsst" data-sin="'+h.id+'" value="'+esc(h.sticker||'')+'" placeholder="ชื่อผู้ติด"><button class="btn pri sm" data-act="stick" data-id="'+h.id+'">บันทึก</button></div>');
