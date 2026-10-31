@@ -874,10 +874,10 @@ function renderHistory(){
   $('#hBody').innerHTML=list.slice(0,300).map(h=>{
     const ver=!!h.verBy;
     const vcell=ver?'<span class="vok">✅ ตรวจสอบแล้ว</span><div class="small">'+esc(h.verBy)+' · '+fmtDT(h.verAt)+'</div>'
-      :'<select class="vin" data-vin="'+h.id+'"><option value="">— เลือกเภสัชกร —</option>'+pharms.map(n=>'<option value="'+esc(n)+'">'+esc(n)+'</option>').join('')+'</select><button class="btn pri sm" data-act="verify" data-id="'+h.id+'">ตรวจสอบแล้ว</button>';
+      :'<input class="vin" data-vin="'+h.id+'" autocomplete="off" placeholder="พิมพ์ค้นหาชื่อ..."><button class="btn pri sm" data-act="verify" data-id="'+h.id+'">ตรวจสอบแล้ว</button>';
     const stk=ver?esc(h.sticker||'-')+(h.stickAt?'<div class="small">'+fmtDT(h.stickAt)+'</div>':'')
       :((h.sticker&&h.stickAt&&!stkEdit.has(h.id))?'<div class="stkrow"><b>'+esc(h.sticker)+'</b><span class="small">'+fmtDT(h.stickAt)+'</span><button class="btn ghost sm" title="แก้ไขชื่อ" data-act="stickedit" data-id="'+h.id+'">✏️</button></div>'
-      :'<div class="stkrow"><input class="vin" list="dlAsst" data-sin="'+h.id+'" value="'+esc(h.sticker||'')+'" placeholder="ชื่อผู้ติด"><button class="btn pri sm" data-act="stick" data-id="'+h.id+'">บันทึก</button></div>');
+      :'<div class="stkrow"><input class="vin" autocomplete="off" data-sin="'+h.id+'" value="'+esc(h.sticker||'')+'" placeholder="พิมพ์ค้นหาชื่อ..."><button class="btn pri sm" data-act="stick" data-id="'+h.id+'">บันทึก</button></div>');
     const acts=ver?'<span class="small">🔒 ล็อกแล้ว</span><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button>'
       :'<button class="btn ghost sm" data-act="edit" data-id="'+h.id+'">✏️ แก้ไข</button><button class="btn blue sm" data-act="print" data-id="'+h.id+'">🖨️ ปริ๊นซ้ำ</button><button class="btn red sm" data-act="del" data-id="'+h.id+'">🗑</button>';
     return '<tr><td>'+'<input type="checkbox" style="width:auto" data-sel="'+h.id+'"'+(sel.has(h.id)?' checked':'')+'>'+'</td><td>'+fmtDT(h.createdAt)+(h.editedAt?'<span class="tag">แก้ไข '+fmtDT(h.editedAt)+'</span>':'')+'</td><td><b>'+esc(h.name)+'</b>'+(h.site?' <span class="tag">'+esc(h.site)+'</span>':'')+(h.code?'<div class="small">'+esc(h.code)+'</div>':'')+'</td><td>'+esc(h.lot)+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||'')+' → '+packsText(h):'-')+'</td><td>'+h.copies+'</td><td>'+esc(h.asst||'-')+'</td><td>'+esc(h.maker||'-')+'</td><td>'+stk+'</td><td class="ver">'+vcell+'</td><td class="act">'+acts+'</td></tr>'}).join('');
@@ -907,6 +907,42 @@ $('#hBody').addEventListener('click',e=>{
     renderSheets(rr);toast((rr!==rec?'ปริ๊นซ้ำตามจำนวนแพ็ค '+rr.copies+' ดวง — ':'สร้างตัวอย่างแล้ว — ')+'กด Ctrl+Shift+P เพื่อพิมพ์');$('#pvCard').scrollIntoView({behavior:'smooth'})}
   else if(b.dataset.act==='del'){if(confirm('ลบรายการนี้ออกจากบันทึก?')){history=history.filter(h=>h!==rec);saveHist();renderHistory()}}
 });
+/* ช่องชื่อในตารางประวัติ: พิมพ์ค้นหา/เลือกจากรายการ แบบเดียวกับในฟอร์ม */
+(function(){
+  const dd=document.createElement('div');dd.className='dd';dd.style.cssText='position:fixed;margin:0;z-index:300;min-width:0';document.body.appendChild(dd);
+  let inp=null,items=[],idx=0;
+  const kind=el=>el.dataset.vin?'pharms':'assts';
+  function build(){
+    const q=inp.value.trim(),ql=q.toLowerCase(),src=kind(inp)==='pharms'?pharms:assts;
+    items=src.filter(u=>!ql||u.toLowerCase().includes(ql)).sort((a,b)=>(b.toLowerCase().startsWith(ql)?1:0)-(a.toLowerCase().startsWith(ql)?1:0)).slice(0,40).map(u=>({u,html:'<span>'+hl(u,q)+'</span>'}));
+    if(kind(inp)==='assts'&&q&&!src.some(u=>u.toLowerCase()===ql))items.push({u:q,add:true,html:'＋ ใช้ชื่อ “'+esc(q)+'” (เพิ่มลงรายการ)'});
+    idx=items.length?0:-1;
+    dd.innerHTML=items.length?items.map((it,i)=>'<div class="it'+(i===idx?' on':'')+(it.add?' add':'')+'" data-i="'+i+'">'+it.html+'</div>').join(''):'<div class="empty">ไม่พบรายการ</div>';
+    place();dd.classList.add('show');
+  }
+  function place(){
+    const r=inp.getBoundingClientRect(),vh=window.innerHeight,w=Math.max(r.width,240);
+    const below=vh-r.bottom,up=r.top;
+    dd.style.left=Math.max(8,Math.min(r.left,window.innerWidth-w-8))+'px';dd.style.width=w+'px';
+    if(below>=180||below>=up){dd.style.top=(r.bottom+4)+'px';dd.style.bottom='auto';dd.style.maxHeight=Math.max(100,Math.min(300,below-12))+'px'}
+    else{dd.style.bottom=(vh-r.top+4)+'px';dd.style.top='auto';dd.style.maxHeight=Math.max(100,Math.min(300,up-12))+'px'}
+  }
+  function hide(){dd.classList.remove('show');inp=null}
+  const isVin=el=>el&&el.matches&&el.matches('#hBody input.vin');
+  document.addEventListener('focusin',e=>{if(isVin(e.target)){inp=e.target;build()}});
+  document.addEventListener('input',e=>{if(isVin(e.target)){inp=e.target;build()}});
+  document.addEventListener('focusout',e=>{if(isVin(e.target))setTimeout(()=>{if(!inp||document.activeElement!==inp)hide()},150)});
+  window.addEventListener('scroll',()=>{if(inp)place()},true);window.addEventListener('resize',()=>{if(inp)place()});
+  dd.addEventListener('mousedown',e=>{const el=e.target.closest('.it');if(el&&inp){e.preventDefault();const it=items[+el.dataset.i],x=inp;x.value=it.u;hide();x.blur()}});
+  document.addEventListener('keydown',e=>{
+    if(!inp||!dd.classList.contains('show'))return;
+    const mark=()=>{[...dd.querySelectorAll('.it')].forEach((el,i)=>el.classList.toggle('on',i===idx));const el=dd.querySelector('.it.on');if(el)el.scrollIntoView({block:'nearest'})};
+    if(e.key==='ArrowDown'){idx=Math.min(items.length-1,idx+1);mark();e.preventDefault()}
+    else if(e.key==='ArrowUp'){idx=Math.max(0,idx-1);mark();e.preventDefault()}
+    else if(e.key==='Enter'&&idx>=0&&items[idx]){e.preventDefault();const x=inp;x.value=items[idx].u;hide();x.blur()}
+    else if(e.key==='Escape')hide();
+  });
+})();
 $('#hSearch').addEventListener('input',renderHistory);
 $('#btnClearHist').onclick=()=>{const n=history.length;if(!n){toast('ไม่มีรายการ');return}
   const v=history.filter(h=>h.verBy).length;
