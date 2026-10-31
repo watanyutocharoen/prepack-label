@@ -58,7 +58,7 @@ function doPost(e) {
     if (KINDS.some(k => L[k])) {
       const cur = readAll_();
       const data = [];
-      KINDS.forEach(k => (L[k] || cur[k]).forEach(v => data.push([k, v])));
+      KINDS.forEach(k => ((L[k] && L[k].length) ? L[k] : cur[k]).forEach(v => data.push([k, v])));
       put_(sheet_('รายชื่อ', H_LIST), H_LIST, data);
     }
 

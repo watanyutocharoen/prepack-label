@@ -1219,7 +1219,7 @@ const Sync=(function(){
         body.drugs=drugs;body.lists=localLists();internal=false;
       }else{
         if(dirty.drugs)body.drugs=drugs;
-        ['units','assts','pharms'].forEach(k=>{if(dirty[k])body.lists[k]=ll[k]});
+        ['units','assts','pharms'].forEach(k=>{if(dirty[k]&&ll[k].length)body.lists[k]=ll[k]});   /* ไม่ส่งลิสต์ว่างไปทับของบนชีต */
       }
       body.up=up;body.del=del;
       if(!body.drugs&&!Object.keys(body.lists).length&&!up.length&&!del.length&&!first){/* แค่ดึง */}
