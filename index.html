@@ -1205,6 +1205,8 @@ const Sync=(function(){
       const up=[],del=[];
       history.forEach(h=>{const j=J(Object.assign({},h,{upd:0}));if(first||sn.h[h.id]!==hash(j)){h.upd=Date.now();up.push(h)}});
       if(!first)Object.keys(sn.h).forEach(id=>{if(!history.some(h=>h.id===id))del.push(id)});
+      /* กันพลาด: ถ้าหายไปเกินครึ่งในคราวเดียว (เช่นข้อมูลในเครื่องว่างผิดปกติ) ไม่ถือว่าเป็นการลบ ไม่ส่งไปลบบนชีต */
+      if(del.length>=3&&del.length>Object.keys(sn.h).length/2)del.length=0;
       if(first){
         internal=true;
         const uni=(a,b)=>{const s=new Set(a);b.forEach(x=>{if(!s.has(x))a.push(x),s.add(x)});return a};
