@@ -1129,9 +1129,9 @@ const Sync=(function(){
     ui();
     if(cfg){run();setInterval(()=>{if(!document.hidden)run()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)run()});window.addEventListener('online',run)}
   }
-  return {start,soon,run};
+  return {start,soon,run,isInternal:()=>internal};
 })();
-syncSoon=()=>{if(!internal)Sync.soon()};
+syncSoon=()=>{if(!Sync.isInternal())Sync.soon()};
 
 clearForm();
 renderManage();renderHistory();Sync.start();
