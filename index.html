@@ -68,7 +68,7 @@ mark{background:#fff0a8;color:inherit;border-radius:3px;padding:0 1px}
 .sheetBox{position:relative;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.2);flex:none}
 .sheet{position:absolute;left:0;top:0;background:#fff;transform-origin:0 0;overflow:hidden}
 .lbl{position:absolute;overflow:hidden;color:#000;font-family:"Sarabun","Noto Sans Thai","Leelawadee UI","Tahoma",sans-serif}
-.lbl.bd{outline:.2mm dashed #999;outline-offset:-.1mm}
+.lbl.bd{outline:.2mm solid #555;outline-offset:-.1mm}
 .lbl .lin{height:100%;padding:.7mm 2mm .7mm 1.8mm;display:flex;flex-direction:column;justify-content:space-between;font-size:8pt}
 .lbl .cd{font-size:.8em;color:#444;line-height:1.1}
 .lbl .nm{font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:clip;font-size:1.05em}
@@ -204,7 +204,8 @@ td.ver .btn{margin-left:4px}
   #gsBadge:empty{display:none}
 }
 @media screen{.pghint{font-size:13px;font-weight:600;color:#0a6f65;background:#e8f6f3;border:1px solid #c5e5df;padding:4px 10px;border-radius:99px}.pghint.warn{color:#8a5a00;background:#fff3d6;border-color:#f1d98a}}
-@media print{.pthint,#btnHintTog,.pghint{display:none!important}}
+@media screen{.paperSel{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.paperSel .pl{font-size:13px;font-weight:600;color:var(--mute);margin-right:2px}.paperSel button{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer;line-height:1.25;text-align:left}.paperSel button small{display:block;font-size:11px;color:var(--mute);font-weight:400}.paperSel button.on{background:var(--pri-l);border-color:var(--pri);color:var(--pri-d);font-weight:700}.paperSel button.on small{color:var(--pri-d)}.paperRow{margin:0 0 14px}}
+@media print{.pthint,#btnHintTog,.pghint,.paperSel,.paperRow{display:none!important}}
 /* ===== มือถือ / จอเล็ก ===== */
 @media(max-width:720px){
   body{font-size:15px}
@@ -309,6 +310,7 @@ td.ver .btn{margin-left:4px}
         <div class="fld"><label>จำนวนสติ๊กเกอร์ (ดวง)</label><input id="fCopies" type="number" min="1" value="56"></div>
         <div class="fld"><label>เริ่มพิมพ์ที่ช่องที่ <span class="small">(ข้ามช่องที่ใช้แล้ว)</span></label><input id="fStart" type="number" min="1" value="1"></div>
       </div>
+      <div class="paperRow"><div class="paperSel" data-paper-sel></div></div>
       <div style="margin:-6px 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost sm" type="button" id="btnFull">เติมให้เต็มแผ่น</button><span class="pghint" id="pgHint"></span></div>
       <div class="actions">
         <button class="btn pri" type="submit" id="btnGen">✨ สร้างสติ๊กเกอร์</button>
@@ -319,6 +321,7 @@ td.ver .btn{margin-left:4px}
 
   <section class="card printable" id="pvCard">
     <h2><span class="dot" style="background:var(--acc)"></span>ตัวอย่างก่อนพิมพ์</h2>
+    <div class="paperRow"><div class="paperSel" data-paper-sel></div></div>
     <div class="pvbar">
       <div class="info" id="pvInfo">ยังไม่ได้สร้างสติ๊กเกอร์</div>
       <button class="btn ghost sm" id="btnHintTog" type="button" title="วิธีพิมพ์ให้ตรงช่อง">💡 วิธีพิมพ์</button>
@@ -452,6 +455,7 @@ td.ver .btn{margin-left:4px}
   <div class="mhead"><h3>ตั้งค่าแผ่นสติ๊กเกอร์</h3><button class="btn ghost sm" data-close>ปิด ✕</button></div>
   <div class="mbody">
     <p class="small" style="margin-top:0">ค่าเริ่มต้นตั้งตามเทมเพลต “ตราช้าง All-Purpose Label A5” (4 คอลัมน์ × 14 แถว = 56 ดวง/แผ่น) ถ้าต้องการปรับให้แก้ตรงนี้ (หน่วย มม.) แล้วลองพิมพ์ทดสอบบนกระดาษธรรมดาโดยเปิด “แสดงเส้นกรอบ”</p>
+    <div class="small" style="margin-bottom:8px;background:#eef6ff;border:1px solid #cfe1f5;padding:6px 10px;border-radius:8px">ตอนนี้กำลังแก้ค่าของกระดาษ: <b id="sPaperName"></b> <span style="color:var(--mute)">(เปลี่ยนแบบกระดาษได้ที่ปุ่ม “กระดาษ” ข้างปุ่มสร้างสติ๊กเกอร์ — แต่ละแบบเก็บค่าแยกกัน)</span></div>
     <div style="margin-bottom:10px"><label>แบบแผ่นสติ๊กเกอร์สำเร็จรูป</label><select id="sPreset"><option value="">— เลือกเพื่อกรอกค่าให้อัตโนมัติ —</option><option value="a4">Junk Label A4 (กระดาษ 16.7×22 ซม. · 7 คอลัมน์ × 12 แถว = 84 ดวง · สติ๊กเกอร์ 21×16 มม.)</option><option value="a5">ตราช้าง All-Purpose A5 (4 คอลัมน์ × 14 แถว = 56 ดวง)</option></select></div>
     <div class="set-grid">
       <div><label>กว้างกระดาษ</label><input type="number" step="any" id="sPageW"></div>
@@ -530,6 +534,30 @@ function findName(list,n){const k=nameKey(n);return k?list.find(x=>nameKey(x)===
 const PL={assts:{get:()=>assts,set:v=>{assts=v;store.set('plp_assts',v)},n:'ผู้ช่วยเภสัชกร'},pharms:{get:()=>pharms,set:v=>{pharms=v;store.set('plp_pharms',v)},n:'เภสัชกร'}};
 let S=(function(){const o=store.get('plp_settings',{});return o&&o.ver===26?Object.assign({},DEF_SET,o):Object.assign({},DEF_SET)
 })();
+/* ---------- กระดาษที่เลือกพิมพ์ ---------- */
+const GEO=['pageW','pageH','cols','rows','lw','lh','ml','mt','gx','gy','midGap','midRow','safeT','safeB','dyTop','dyBot','dyLast','offX','offY','a4','border','minH','compactH'];
+const geoOf=o=>{const g={};GEO.forEach(k=>g[k]=o[k]);return g};
+const PAPERS={
+  junk:{name:'Junk Label',sub:'167×220 มม. · 84 ดวง/แผ่น',tag:'แนะนำ',geo:geoOf(DEF_SET)},
+  a5:{name:'ตราช้าง เบอร์ A5',sub:'165×224 มม. · 56 ดวง/แผ่น',tag:'ใช้เมื่อ Junk Label หมด',geo:Object.assign(geoOf(DEF_SET),{pageW:165.1,pageH:224,cols:4,rows:14,lw:38.01,lh:13,ml:2,mt:1.5,gx:3,gy:3,midGap:0,midRow:0,safeT:3.5,safeB:3,dyTop:0,dyBot:0,dyLast:0,a4:false,border:false})},
+  a4:{name:'A4 กรีดเอง',sub:'A4 · 9×17 = 153 ดวง/แผ่น มีเส้นกรอบให้กรีด',tag:'แบบดั้งเดิม',geo:Object.assign(geoOf(DEF_SET),{pageW:210,pageH:297,cols:9,rows:17,lw:21,lh:16,ml:10.5,mt:12.5,gx:0,gy:0,midGap:0,midRow:0,safeT:3,safeB:3,dyTop:0,dyBot:0,dyLast:0,offX:0,offY:0,a4:true,border:true})}
+};
+if(!PAPERS[S.paper])S.paper='junk';
+function setPaper(p,silent){
+  if(!PAPERS[p])return;
+  if(p!==S.paper){
+    S.profiles=Object.assign({},S.profiles);S.profiles[S.paper]=geoOf(S);
+    Object.assign(S,PAPERS[p].geo,S.profiles[p]||{});S.paper=p;
+    store.set('plp_settings',S);
+  }
+  renderPaperSel();
+  if(!silent){try{updatePgHint()}catch(e){}if(current&&current.name!=='ทดสอบขอบ')renderSheets(current)}
+}
+function renderPaperSel(){
+  const h='<span class="pl">🧾 กระดาษ:</span>'+Object.keys(PAPERS).map(k=>'<button type="button" data-paper="'+k+'" class="'+(S.paper===k?'on':'')+'">'+PAPERS[k].name+(PAPERS[k].tag?' <small>'+PAPERS[k].tag+' · '+PAPERS[k].sub+'</small>':'<small>'+PAPERS[k].sub+'</small>')+'</button>').join('');
+  document.querySelectorAll('[data-paper-sel]').forEach(el=>el.innerHTML=h);
+}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-paper-sel] button[data-paper]');if(b)setPaper(b.dataset.paper)});
 const saveDrugs=()=>store.set('plp_drugs',drugs), saveUnits=()=>store.set('plp_units',units), saveHist=()=>store.set('plp_history',history);
 
 /* ---------- Helpers ---------- */
@@ -1113,6 +1141,7 @@ window.addEventListener('afterprint',()=>{if(document.body.classList.contains('r
 /* ---------- Settings ---------- */
 const SF={pageW:'#sPageW',pageH:'#sPageH',cols:'#sCols',rows:'#sRows',lw:'#sLw',lh:'#sLh',ml:'#sMl',mt:'#sMt',gx:'#sGx',gy:'#sGy',midGap:'#sMidGap',midRow:'#sMidRow',dyTop:'#sDyTop',dyLast:'#sDyLast',offX:'#sOffX',offY:'#sOffY',dyBot:'#sDyBot',safeT:'#sSafeT',safeB:'#sSafeB',minH:'#sMinH',compactH:'#sCompactH',fs:'#sFs'};
 function loadSettingsUI(){
+  const pn=$('#sPaperName');if(pn)pn.textContent=(PAPERS[S.paper]||PAPERS.junk).name;
   for(const k in SF)$(SF[k]).value=S[k];
   $('#sBorder').checked=S.border;$('#sA4').checked=!!S.a4;$('#sShowCode').checked=S.showCode;$('#sShowPack').checked=S.showPack;
 }
@@ -1123,13 +1152,13 @@ $('#btnSaveSet').onclick=()=>{
   const n=Object.assign({},S);
   for(const k in SF){const v=parseFloat($(SF[k]).value);if(isNaN(v)||v<0){toast('ค่าไม่ถูกต้อง: '+k);return}n[k]=v}
   n.cols=Math.max(1,Math.round(n.cols));n.rows=Math.max(1,Math.round(n.rows));if(n.fs<30)n.fs=30;
-  n.ver=26;n.border=$('#sBorder').checked;n.a4=$('#sA4').checked;n.showCode=$('#sShowCode').checked;n.showPack=$('#sShowPack').checked;
+  n.ver=26;n.paper=S.paper;n.profiles=S.profiles;n.border=$('#sBorder').checked;n.a4=$('#sA4').checked;n.showCode=$('#sShowCode').checked;n.showPack=$('#sShowPack').checked;
   S=n;store.set('plp_settings',S);toast('บันทึกการตั้งค่าแล้ว');
   if(current)renderSheets(current);
   $('#mSettings').classList.remove('show');
 };
 $('#btnTest').onclick=()=>{$('#mSettings').classList.remove('show');renderTestSheet();$('#pvCard').scrollIntoView({behavior:'smooth'})};
-$('#btnResetSet').onclick=()=>{S=Object.assign({},DEF_SET);store.set('plp_settings',S);loadSettingsUI();if(current)renderSheets(current);toast('คืนค่าเริ่มต้นแล้ว')};
+$('#btnResetSet').onclick=()=>{const pp=S.paper,pr=Object.assign({},S.profiles);delete pr[pp];S=Object.assign({},DEF_SET,PAPERS[pp].geo,{paper:pp,profiles:pr});store.set('plp_settings',S);loadSettingsUI();if(current)renderSheets(current);toast('คืนค่าเริ่มต้นแล้ว')};
 $('#btnBackup').onclick=()=>download('prepack-label-backup-'+todayISO()+'.json',JSON.stringify({drugs,units,history,assts,pharms,settings:S}),'application/json');
 $('#restoreFile').onchange=e=>{
   const f=e.target.files[0];if(!f)return;
@@ -1337,7 +1366,7 @@ const Sync=(function(){
 syncSoon=()=>{if(!Sync.isInternal())Sync.soon()};
 
 clearForm();
-renderManage();renderHistory();Sync.start();
+renderPaperSel();renderManage();renderHistory();Sync.start();
 document.querySelectorAll('.expq button').forEach(b=>b.addEventListener('click',()=>{
   const f=n=>String(n).padStart(2,'0');
   let base=$('#fPack').value;
