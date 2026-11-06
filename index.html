@@ -539,11 +539,11 @@ const GEO=['pageW','pageH','cols','rows','lw','lh','ml','mt','gx','gy','midGap',
 const geoOf=o=>{const g={};GEO.forEach(k=>g[k]=o[k]);return g};
 const PAPERS={
   junk:{name:'Junk Label',sub:'167×220 มม. · 84 ดวง/แผ่น',tag:'แนะนำ',geo:geoOf(DEF_SET)},
-  a5:{name:'ตราช้าง เบอร์ A5',sub:'165×224 มม. · 56 ดวง/แผ่น',tag:'ใช้เมื่อ Junk Label หมด',geo:Object.assign(geoOf(DEF_SET),{pageW:165.1,pageH:224,cols:4,rows:14,lw:38.01,lh:13,ml:2,mt:1.5,gx:3,gy:3,midGap:0,midRow:0,safeT:3.5,safeB:3,dyTop:0,dyBot:-0.9,dyLast:0,a4:false,border:false,fs:92})},
+  a5:{name:'ตราช้าง เบอร์ A5',sub:'165×224 มม. · 56 ดวง/แผ่น',tag:'ใช้เมื่อ Junk Label หมด',geo:Object.assign(geoOf(DEF_SET),{pageW:165.1,pageH:224,cols:4,rows:14,lw:38.01,lh:13,ml:2,mt:1.5,gx:3,gy:3,midGap:0,midRow:0,safeT:3.5,safeB:3,dyTop:0,dyBot:-0.9,dyLast:-0.5,a4:false,border:false,fs:92})},
   a4:{name:'A4 กรีดเอง',sub:'A4 · 9×17 = 153 ดวง/แผ่น มีเส้นกรอบให้กรีด',tag:'แบบดั้งเดิม',geo:Object.assign(geoOf(DEF_SET),{pageW:210,pageH:297,cols:9,rows:17,lw:21,lh:16,ml:10.5,mt:12.5,gx:0,gy:0,midGap:0,midRow:0,safeT:3,safeB:3,dyTop:0,dyBot:0,dyLast:0,offX:0,offY:0,a4:true,border:true})}
 };
 if(!PAPERS[S.paper])S.paper='junk';
-if(S.paperRev!==2){if(S.profiles)delete S.profiles.a5;if(S.paper==='a5')Object.assign(S,PAPERS.a5.geo);S.paperRev=2;store.set('plp_settings',S)}
+if(S.paperRev!==3){if(S.profiles)delete S.profiles.a5;if(S.paper==='a5')Object.assign(S,PAPERS.a5.geo);S.paperRev=3;store.set('plp_settings',S)}
 function setPaper(p,silent){
   if(!PAPERS[p])return;
   if(p!==S.paper){
