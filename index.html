@@ -139,7 +139,9 @@ td.ver .btn{margin-left:4px}
 #reportArea .sum{margin-top:8px;font-weight:700}
 @media print{
   body.rpt header,body.rpt main,body.rpt .modal,body.rpt #toast{display:none!important}
-  body.rpt #reportArea{display:block!important}
+  body.rpt #reportArea{display:block!important;padding:9mm 10mm 9mm;box-sizing:border-box}
+  #reportArea tr.sp td{border:0!important;padding:0!important;height:9mm;background:none!important}
+  #reportArea tfoot{display:table-footer-group}
   html,body{background:#fff!important}
   header,main>section,.modal,#toast,.noprint{display:none!important}
   main{display:block!important;margin:0!important;padding:0!important;max-width:none!important}
@@ -1129,11 +1131,11 @@ $('#btnRptPrint').onclick=()=>{
   if(!l.length){toast('ไม่มีรายการในช่วงที่เลือก');return}
   const sheets=l.reduce((a,h)=>a+(+h.copies||0),0),nv=l.filter(h=>h.verBy).length;
   $('#reportArea').innerHTML='<div class="rpt-h"><div><h1>รายงานการแบ่งบรรจุยา</h1><div>ช่วงวันที่ '+esc(fmtDate($('#rFrom').value))+' – '+esc(fmtDate($('#rTo').value))+'</div><div><b>หน่วยที่แพ็คยา: '+esc(($('#rSite').value==='all'?['M1','M2','M4','ปกส.'].filter(x=>l.some(h=>h.site===x)).join(', ')||'-':$('#rSite').value))+'</b></div></div><div style="text-align:right">พิมพ์เมื่อ '+fmtDT(Date.now())+'</div></div>'
-   +'<table><thead><tr><th>#</th><th>วัน-เวลา</th><th>รหัส</th><th>ชื่อยา</th><th>Lot</th><th>แบ่งบรรจุ</th><th>หมดอายุ</th><th>จำนวนต่อแพ็ค</th><th>ใช้แบ่งบรรจุ</th><th>ได้แพ็ค</th><th>ผู้แบ่งบรรจุ</th><th>ผู้ทำสติ๊กเกอร์</th><th>ผู้ติดสติ๊กเกอร์</th><th>เภสัชกรตรวจสอบ</th></tr></thead><tbody>'
+   +'<table><thead><tr class="sp"><td colspan="14"></td></tr><tr><th>#</th><th>วัน-เวลา</th><th>รหัส</th><th>ชื่อยา</th><th>Lot</th><th>แบ่งบรรจุ</th><th>หมดอายุ</th><th>จำนวนต่อแพ็ค</th><th>ใช้แบ่งบรรจุ</th><th>ได้แพ็ค</th><th>ผู้แบ่งบรรจุ</th><th>ผู้ทำสติ๊กเกอร์</th><th>ผู้ติดสติ๊กเกอร์</th><th>เภสัชกรตรวจสอบ</th></tr></thead><tbody>'
    +l.map((h,i)=>'<tr><td>'+(i+1)+'</td><td>'+fmtDT(h.createdAt)+'</td><td>'+esc(h.code||'')+'</td><td>'+esc(h.name)+'</td><td>'+esc(h.lot||'')+'</td><td>'+esc(fmtDate(h.pack))+'</td><td>'+esc(fmtDate(h.exp))+'</td><td>'+esc(h.qty)+' '+esc(h.unit)+'</td><td>'+(h.total?esc(h.total)+' '+esc(h.totalUnit||''):'')+'</td><td>'+(h.packs?packsText(h):'')+'</td><td>'+esc(h.asst||'')+'</td><td>'+esc(h.maker||'')+'</td><td>'+esc(h.sticker||'')+'</td><td>'+(h.verBy?esc(h.verBy)+'<br>'+fmtDT(h.verAt):'<i>ยังไม่ตรวจสอบ</i>')+'</td></tr>').join('')
-   +'</tbody></table><div class="sum">รวม '+l.length+' รายการ · ตรวจสอบแล้ว '+nv+' รายการ</div>';
+   +'</tbody><tfoot><tr class="sp"><td colspan="14"></td></tr></tfoot></table><div class="sum">รวม '+l.length+' รายการ · ตรวจสอบแล้ว '+nv+' รายการ</div>';
   $('#mReport').classList.remove('show');
-  $('#pageStyle').textContent='@page{size:A4 landscape;margin:10mm}';
+  $('#pageStyle').textContent='@page{size:A4 landscape;margin:0}';
   document.body.classList.add('rpt');
   setTimeout(()=>window.print(),150);
 };
